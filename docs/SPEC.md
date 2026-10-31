@@ -107,14 +107,16 @@ infra/
   image.yaml              the AWS::Lambda::MicrovmImage; imports bootstrap exports via Fn::ImportValue
 scripts/
   lib.sh                  load config.env; assert_sandbox; stack_output <stack> <key>; log (stderr); die
-  deploy.sh               deploy bootstrap → resolve base image version → zip app/ → sha256 key → s3 cp → deploy image → wait for image CREATED
+  deploy.sh               deploy bootstrap → require BASE_IMAGE_VERSION → zip app/ → sha256 key → s3 cp → deploy image → wait for image CREATED
+                          (`--bootstrap-only` stops after the bootstrap stack)
+  base-version.sh         one-time probe that discovers BASE_IMAGE_VERSION (Open question 1)
   run.sh                  run-microvm; write .build/microvm.json
   call.sh                 mint auth token; curl the given path (default /); print response body
   microvm.sh              <status|suspend|resume|terminate> for the MicroVM in .build/microvm.json
   smoke.sh                end-to-end lifecycle check (section 6)
   destroy.sh              ordered teardown (principle 10)
 config.env                committed, non-secret defaults (section 5)
-Makefile                  deploy, run, call, status, suspend, resume, terminate, smoke, destroy, check
+Makefile                  base-version, deploy, run, call, status, suspend, resume, terminate, smoke, destroy, check
 README.md                 walkthrough (G7)
 ```
 
@@ -170,7 +172,7 @@ Two stacks are needed because the bucket must exist and contain the zip before t
 | `TOKEN_TTL_MINUTES` | `15` | max 60 |
 | `LOG_RETENTION_DAYS` / `LogRetentionDays` | `7` | |
 | `RESUME_WAIT_SECONDS` | `30` | how long `smoke.sh` waits for auto-resume before calling `resume` |
-| `BASE_IMAGE_VERSION` / `BaseImageVersion` | *(empty)* | Resolved by `deploy.sh` (see Open question 1). If it can't be resolved and the value is empty, `deploy.sh` exits 1, saying to set it. |
+| `BASE_IMAGE_VERSION` / `BaseImageVersion` | *(empty)* | Discovered once by `make base-version` in Phase 3 (Open question 1), then committed in `config.env`. `deploy.sh` exits 1 when it is empty, telling you to run `make base-version`. |
 
 These come from the environment and are never committed:
 
@@ -233,6 +235,7 @@ Paths are under `/aws/lambda-microvms/runtime/v1/`.
 | `check` | the section 7 offline commands, in order | no |
 | `deploy` | `scripts/deploy.sh` | yes |
 | `run` | `scripts/run.sh` | yes |
+| `base-version` | `scripts/base-version.sh` | yes |
 | `call` | `scripts/call.sh` | yes |
 | `status`, `suspend`, `resume`, `terminate` | `scripts/microvm.sh <target>` | yes |
 | `smoke` | `scripts/smoke.sh` | yes |
@@ -277,12 +280,13 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
 
 ### Phase 3: Sandbox run and README
 
-1. One task runs `make deploy`, then `make smoke`, then `make destroy`. `destroy` always runs, even after a failure.
-   - It records in the log: the resolved `BaseImageVersion`, how long the image build took, `resumePath`, and the `run` hook timing from CloudWatch (`aws logs tail`).
-   - It resolves Open questions 1–4 and records each answer under `Decisions`.
+1. One task runs `make base-version` (Open question 1). It commits the discovered value to `config.env` and records it under `Decisions`.
+2. One task runs `make deploy`, then `make smoke`, then `make destroy`. `destroy` always runs, even after a failure.
+   - It records in the log: how long the image build took, `resumePath`, and the `run` hook timing from CloudWatch (`aws logs tail`).
+   - It resolves Open questions 2–4 and records each answer under `Decisions`.
    - On failure, the task **blocks** with the error and the last 50 lines of the image build log. It does not retry in a loop.
-2. A tuning task for `RUN_TIMEOUT_SECONDS`, using the measured `run` hook duration.
-3. A `README.md` walkthrough covering:
+3. A tuning task for `RUN_TIMEOUT_SECONDS`, using the measured `run` hook duration.
+4. A `README.md` walkthrough covering:
    - prerequisites (IAM permissions, env vars);
    - each `make` target and the concept it demonstrates;
    - the two-stack and content-hash reasoning;
@@ -310,9 +314,15 @@ No task depends on a manual check, and no Phase 1 or 2 task depends on Phase 3.
 
 ## 9. Open questions
 
-1. **How do we resolve `BaseImageVersion`?**
-   - `list-managed-microvm-images` returns only `imageArn`. Try `list-microvm-image-versions --image-identifier <managed ARN>` (pick the latest `ACTIVE`), then `get-microvm-image`.
-   - If neither works, `deploy.sh` requires `BASE_IMAGE_VERSION` in `config.env`, and the task records the value the operator must set.
+1. **How do we find `BaseImageVersion`?** CloudFormation requires it, and there is no documented way to look it up.
+   - **Already ruled out** (tested 2026-10-31 with an admin user): `list-managed-microvm-images` returns only `imageArn`, `createdAt`, and `updatedAt`. `get-microvm-image` and `list-microvm-image-versions` on the AWS-owned base image ARN return `AccessDenied` even for admins. Do not use them.
+   - **Probe** (`scripts/base-version.sh`):
+     1. Run `deploy.sh --bootstrap-only`, then package and upload the app as usual.
+     2. Call `aws lambda-microvms create-microvm-image` **without** `--base-image-version`, named `${IMAGE_NAME}-probe`, using the bootstrap build role and artifact. The API treats it as optional (confirmed with `aws lambda-microvms create-microvm-image help`, CLI 2.39.3); only the CloudFormation schema requires it.
+     3. Poll `get-microvm-image` on the probe (an image you own, so reads are allowed) until `CREATED` or `CREATE_FAILED`. Then search the output of `get-microvm-image`, `get-microvm-image-version`, and `list-microvm-image-builds` for the base image version the service chose.
+     4. Print the value as JSON. Always delete the probe image in an `EXIT` trap.
+   - **If found:** write `BASE_IMAGE_VERSION=<value>` to `config.env`, commit it, and record it under `Decisions`.
+   - **If the responses don't contain the version:** the task **blocks**, asking the operator to supply `BASE_IMAGE_VERSION`. Do not guess a value.
 2. **Does CloudFormation create return before the image reaches `CREATED`?** `deploy.sh` polls `get-microvm-image` until `CREATED` regardless, and fails on `CREATE_FAILED` or `UPDATE_FAILED`. Record the answer.
 3. **Does the image-level `EgressNetworkConnectors` (documented as runtime) also give the Dockerfile's `dnf install` network access at build time?** If the build fails at `dnf`, record it and decide; for example, whether egress must be passed differently. `run.sh` passes `INTERNET_EGRESS` explicitly at run time either way.
 4. **Which managed ingress connector should `run.sh` pass?**

@@ -22,6 +22,7 @@ These notes were compiled on 2026-10-31 from AWS documentation and checks run ag
   - The **execution role** (`--execution-role-arn` on `run-microvm`) is assumed at runtime and exposed to the guest through IMDSv2.
   - Without an execution role, app stdout is **not** shipped to CloudWatch. **[docs]**
 - **Base OS.** The only managed base image is `arn:aws:lambda:<region>:aws:microvm-image:al2023-1` (Amazon Linux 2023), and there is nothing newer. In us-west-2, `list-managed-microvm-images` returns only `imageArn`, `createdAt`, and `updatedAt`; **there is no version string**. **[tested]**
+- **You can't read AWS-owned base images.** `get-microvm-image` and `list-microvm-image-versions` on `…:aws:microvm-image:al2023-1` return `AccessDenied`, even for an admin user. Calls on images you own work. **[tested]**
 - **Architecture.** `CpuConfigurations` allows only `ARM_64`. Build and test containers locally with `--platform linux/arm64`. **[schema]**
 
 ## `AWS::Lambda::MicrovmImage` (CloudFormation)
