@@ -2,18 +2,13 @@
 
 Version: 0.1 Status: ready for flight
 
-The Kūkulu planner reads this file in full and derives the build plan from it. Facts about the service, all verified on 2026-10-31, are in [`docs/reference/microvms-notes.md`](reference/microvms-notes.md). The CloudFormation resource schema is in [`docs/reference/microvmimage-schema.json`](reference/microvmimage-schema.json). Read both before planning. Every guessed number is marked `⚠️ ASSUMPTION` and has a config key.
+The Kūkulu planner reads this file in full and derives the build plan from it. Facts about the service, all verified on 2026-10-31, are in [`docs/reference/microvms-notes.md`](reference/microvms-notes.md). The CloudFormation resource schema is in [`docs/reference/microvmimage-schema.json`](reference/microvmimage-schema.json). Read both before planning.
 
 ## 1. Overview
 
-This is a minimal, heavily commented repository that:
+A minimal, heavily commented repo that builds a Lambda MicroVM image with CloudFormation, runs one MicroVM, calls it over HTTPS, then suspends, resumes, and terminates it.
 
-- builds an AWS Lambda MicroVM image with CloudFormation,
-- runs one MicroVM from it,
-- calls it over HTTPS,
-- suspends, resumes, and terminates it.
-
-It is for a developer learning Lambda MicroVMs, and it is the template they will fork for later experiments. The repo is done when `make deploy && make smoke && make destroy` passes against a sandbox AWS account in `us-west-2`, and the README explains which MicroVM concept each step demonstrates.
+It's for a developer learning Lambda MicroVMs, and it is the template they will fork for later experiments. The repo is done when `make deploy && make smoke && make destroy` passes against a sandbox AWS account in `us-west-2`, and the README explains which MicroVM concept each step demonstrates.
 
 ## 2. Goals and non-goals
 
@@ -31,21 +26,13 @@ The scope is **minimal on purpose**: only the features nearly every MicroVM user
   - `run`: a per-MicroVM unique ID is generated after launch, not baked into the shared snapshot.
 - G7 **README walkthrough.** For each `make` target, what it does and which MicroVM concept it shows.
 
-**Non-goals** (each is a future issue; tasks must not build any of them):
+**Non-goals:** anything not in Goals. In particular, do not build:
 
-- The `validate`, `suspend`, `resume`, and `terminate` lifecycle hooks. In CFN they are `DISABLED`.
-- A local Docker harness that simulates hook calls.
-- AWS SAM, or a "launcher" Lambda function that runs MicroVMs on demand.
-- Shell access (`SHELL_INGRESS`, `create-microvm-shell-auth-token`).
-- VPC egress or `AWS::Lambda::NetworkConnector`.
-- WebSockets, HTTP/2, gRPC, or multiple app ports.
-- Passing `runHookPayload` content. The `/run` handler reads `microvmId` only.
-- Image version management (activate, deactivate, or delete versions).
-- Calling AWS APIs from inside the MicroVM with execution role credentials.
-- `AdditionalOsCapabilities: ["ALL"]`.
-- Sizing, scaling, or cost benchmarking.
-- CI pipelines, CDK, multi-region support, or PrivateLink.
-- Linters and formatters beyond `tsc`, and any TypeScript build or bundling step.
+- The `validate`, `suspend`, `resume`, or `terminate` hooks. They stay `DISABLED` in CFN.
+- AWS SAM, or any Lambda function that launches MicroVMs.
+- VPC egress (`AWS::Lambda::NetworkConnector`) or extra ingress connectors such as shell access.
+- Any use of `runHookPayload`. The `/run` handler reads `microvmId` only.
+- Tooling beyond `tsc` and `node --test`: no linters, formatters, bundlers, or build steps.
 
 ## 3. Engineering principles
 
@@ -164,7 +151,7 @@ Two stacks are needed because the bucket must exist and contain the zip before t
 | `HOOKS_PORT` / `HooksPort` | `9000` | documented hooks default |
 | `MEMORY_MIB` / `MemoryMiB` | `2048` | documented default baseline (2 GB / 1 vCPU) |
 | `READY_TIMEOUT_SECONDS` / `ReadyTimeoutInSeconds` | `30` | documented default |
-| `RUN_TIMEOUT_SECONDS` / `RunTimeoutInSeconds` | `5` | ⚠️ ASSUMPTION. The documented default is 1 s; 5 s is headroom for a cold path. Tune in Phase 3 using `run` hook log timestamps. |
+| `RUN_TIMEOUT_SECONDS` / `RunTimeoutInSeconds` | `5` | headroom over the documented 1 s default |
 | `IDLE_MAX_SECONDS` | `300` | sandbox cost choice (minimum 60) |
 | `SUSPENDED_SECONDS` | `600` | sandbox cost choice |
 | `AUTO_RESUME` | `true` | |
@@ -230,16 +217,7 @@ Paths are under `/aws/lambda-microvms/runtime/v1/`.
 
 ### Makefile
 
-| Target | Runs | Needs AWS |
-|---|---|---|
-| `check` | the section 7 offline commands, in order | no |
-| `deploy` | `scripts/deploy.sh` | yes |
-| `run` | `scripts/run.sh` | yes |
-| `base-version` | `scripts/base-version.sh` | yes |
-| `call` | `scripts/call.sh` | yes |
-| `status`, `suspend`, `resume`, `terminate` | `scripts/microvm.sh <target>` | yes |
-| `smoke` | `scripts/smoke.sh` | yes |
-| `destroy` | `scripts/destroy.sh` | yes |
+Each target runs `scripts/<target>.sh`; `status`, `suspend`, `resume`, and `terminate` run `scripts/microvm.sh <target>`. `check` runs the section 7 commands offline, in order. Every other target calls AWS.
 
 ## 7. Commands
 
@@ -264,7 +242,7 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
 - Build the app server, hooks server, state, tests, and Dockerfile.
 - Required tests:
   - `/ready` returns 503 before listening and 200 after.
-  - `/run` sets `instanceId` and `microvmId`, and two runs differ (principle 8).
+  - `/run` sets `instanceId` and `microvmId` (plus the principle 8 test).
   - `GET /` increments `requestCount`.
   - An unknown path returns 404.
   - A malformed `/run` body is tolerated.
@@ -285,9 +263,8 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
    - It records in the log: how long the image build took, `resumePath`, and the `run` hook timing from CloudWatch (`aws logs tail`).
    - It resolves Open questions 2–4 and records each answer under `Decisions`.
    - On failure, the task **blocks** with the error and the last 50 lines of the image build log. It does not retry in a loop.
-3. A tuning task for `RUN_TIMEOUT_SECONDS`, using the measured `run` hook duration.
-4. A `README.md` walkthrough covering:
-   - prerequisites (IAM permissions, env vars);
+3. A `README.md` walkthrough covering:
+   - prerequisites (an AWS account with admin access, `EXPECTED_ACCOUNT_ID`);
    - each `make` target and the concept it demonstrates;
    - the two-stack and content-hash reasoning;
    - the cost model (baseline compute while running, storage while suspended, image versions cost storage);
@@ -298,19 +275,9 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
 
 No task depends on a manual check, and no Phase 1 or 2 task depends on Phase 3.
 
-### Sandbox prerequisites (provided by the operator before the flight)
+### Sandbox prerequisites
 
-- The flight shell exports `EXPECTED_ACCOUNT_ID`, and optionally `AWS_PROFILE`.
-- Those credentials can use these actions:
-  - `lambda:CreateMicrovmImage`, `UpdateMicrovmImage`, `GetMicrovmImage`, `GetMicrovmImageVersion`, `ListMicrovmImageVersions`, `ListManagedMicrovmImages`, `DeleteMicrovmImage`, `DeleteMicrovmImageVersion`
-  - `RunMicrovm`, `GetMicrovm`, `SuspendMicrovm`, `ResumeMicrovm`, `TerminateMicrovm`, `CreateMicrovmAuthToken`
-  - `lambda:PassNetworkConnector`, `lambda:TagResource`, `lambda:ListTags`
-  - `cloudformation:*` on `mvm-hello-*` stacks
-  - `s3:*` on the artifact bucket
-  - `iam:CreateRole`/`DeleteRole`/`PutRolePolicy`/`DeleteRolePolicy`/`GetRole`/`PassRole` on `mvm-hello-*` roles
-  - `logs:*` on `/aws/lambda-microvms/*`
-
-  If they're missing, the Phase 3 task blocks with the `AccessDenied` message. It is not a code bug.
+The operator exports `EXPECTED_ACCOUNT_ID` (and optionally `AWS_PROFILE`) for an account where they have admin access. If an AWS call returns `AccessDenied`, the task blocks with the message. It is not a code bug.
 
 ## 9. Open questions
 

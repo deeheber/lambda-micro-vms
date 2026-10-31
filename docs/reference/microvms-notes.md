@@ -29,21 +29,9 @@ These notes were compiled on 2026-10-31 from AWS documentation and checks run ag
 
 **[schema]**: full schema in `microvmimage-schema.json`.
 
-- **All 13 properties are required:**
-  - `Name`: create-only, so changing it replaces the image. Pattern `^[a-zA-Z0-9-_]+$`, at most 64 characters.
-  - `BaseImageArn`
-  - `BaseImageVersion`
-  - `BuildRoleArn`
-  - `Description`
-  - `CodeArtifact {Uri}`: `s3://bucket/key.zip`.
-  - `Logging`: `{CloudWatch: {LogGroup, LogStream?}}` or `{Disabled: true}`.
-  - `EgressNetworkConnectors`: string ARNs, at most 10. Documented as "available to the MicroVM at runtime."
-  - `CpuConfigurations`: `[{Architecture: ARM_64}]`.
-  - `Resources`: `[{MinimumMemoryInMiB: int}]`, at most 1 item.
-  - `AdditionalOsCapabilities`: the only enum value is `ALL`, and **`[]` is valid** because there is no `minItems`.
-  - `Hooks`: `{Port, MicrovmImageHooks{Ready, ReadyTimeoutInSeconds (1–3600), Validate, ValidateTimeoutInSeconds (1–3600)}, MicrovmHooks{Run, Resume, Suspend, Terminate, each with *TimeoutInSeconds (1–60)}}`. Hook states are `ENABLED` or `DISABLED`.
-  - `EnvironmentVariables`: `[{Key, Value}]`, at most 50. **`[]` is valid.** These are set in the container **during the snapshot build**.
-- **Optional:** `Tags`.
+- **All 13 properties are required.** See `microvmimage-schema.json` for the exact shapes, and SPEC section 4 for the values this repo uses. Two things worth knowing:
+  - `AdditionalOsCapabilities: []` and `EnvironmentVariables: []` are valid; neither has `minItems`.
+  - `Name` is create-only, so changing it replaces the image.
 - **`Ref`** returns the image ARN.
 - **`GetAtt`:** `ImageArn`, `State`, `LatestActiveImageVersion`, `LatestFailedImageVersion`, `CreatedAt`, `UpdatedAt`.
 - **States:** `CREATING`, `CREATED`, `CREATE_FAILED`, `UPDATING`, `UPDATED`, `UPDATE_FAILED`, `DELETING`, `DELETE_FAILED`, `DELETED`.
@@ -141,19 +129,7 @@ aws lambda-microvms get-microvm-image --image-identifier <imageArn>   # image st
 
 ## Pricing (for the README)
 
-**[docs]**
-
-- **While running:** you pay the baseline compute rate. The default baseline is 2 GB memory and 1 vCPU, and CPU scales with memory at a 2:1 ratio. The VM can burst to 4× the baseline, and you pay for the burst only while it's in use.
-- **While suspended:** you pay snapshot storage only.
-- **Image versions:** each one costs storage even when no MicroVMs are running.
-- **Data transfer:** standard AWS rates.
-
-## Availability
-
-**[docs]**
-
-- **Launch regions:** us-east-1, us-east-2, us-west-2, ap-northeast-1, eu-west-1.
-- **Added in 2026-10:** ap-east-1, ap-southeast-5, ap-southeast-7, eu-south-2.
+**[docs]** While running, you pay the baseline compute rate (default 2 GB / 1 vCPU, with bursts up to 4× billed only while in use). While suspended, you pay storage only. Each image version costs storage. Data transfer is billed at standard rates.
 
 ## Sources
 
