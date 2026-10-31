@@ -262,6 +262,7 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
 2. One task runs `make deploy`, then `make smoke`, then `make destroy`. `destroy` always runs, even after a failure.
    - It records in the log: how long the image build took, `resumePath`, and the `run` hook timing from CloudWatch (`aws logs tail`).
    - It resolves Open questions 2–4 and records each answer under `Decisions`.
+   - It also writes every resolved open question (including the `BASE_IMAGE_VERSION` from task 1) into `docs/reference/microvms-notes.md`, tagged `[tested <date>]`, so later flights start from the answers instead of the questions.
    - On failure, the task **blocks** with the error and the last 50 lines of the image build log. It does not retry in a loop.
 3. A `README.md` walkthrough covering:
    - prerequisites (an AWS account with admin access, `EXPECTED_ACCOUNT_ID`);
