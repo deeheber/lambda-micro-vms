@@ -17,4 +17,4 @@ The order to work through the `next-experiment` issues after the hello world. Co
 
 Items that pair well as one Kūkulu flight: #8 with #4, and #16 with #17.
 
-When an issue closes, check it off here or drop it from the table, so the next one up is always row 1.
+When an issue closes, delete its row, so row 1 is always the next one to do.
