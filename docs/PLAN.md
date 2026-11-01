@@ -25,6 +25,8 @@ Derived from docs/SPEC.md v0.2 on 2026-11-01. SPEC.md wins over this file.
 - CloudWatch evidence → `P3-01` saves `aws logs tail` output to `.build/cloudwatch.log` before `make destroy`, because the log group belongs to the bootstrap stack and is deleted with it. The Phase 3 manual check reads that file.
 - `mutation.targeted` → `cd app && node --test --test-name-pattern={filter} 'test/**/*.test.ts'`. SPEC's `npm --prefix app test -- --test-name-pattern={filter}` appends the option after the glob, where Node ignores it (verified: the non-matching test still ran).
 - Lifecycle logging → `lib.sh`'s `log` prefixes each stderr line with an ISO-8601 UTC timestamp, so `P3-01` can time the `run` hook against the moment `run.sh` launched the MicroVM.
+- 2026-11-01: maxRounds set to 4 (was 3) by the operator through kukulu_flight_options.
+- 2026-11-01: maxRoundsHard set to 4 (was 6) by the operator through kukulu_flight_options.
 
 ## Conventions
 
