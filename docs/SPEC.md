@@ -265,7 +265,7 @@ All of these make no AWS calls and exit non-zero on failure. `npm --prefix app c
 ### Phase 2: Infra and packaging
 
 - Write `bootstrap.yaml` and `image.yaml` as specified in section 4. They must be cfn-lint clean.
-- Write `deploy.sh`. Packaging: zip the contents of `app/` without `node_modules/` or `test/`, so the zip root has `Dockerfile` and `src/`. Name it `.build/app-<sha256 of zip>.zip`.
+- Write `deploy.sh`. Packaging: zip the contents of `app/` without `node_modules/` or `test/`, so the zip root has `Dockerfile` and `src/`. Name it `.build/app-<sha256 of zip>.zip` and upload it to `s3://<ArtifactBucket>/artifacts/app-<sha256 of zip>.zip`. The `artifacts/` prefix is required: it is the only path `BuildRole` can read.
 - No AWS calls are made in this phase.
 - **Manual check:** review both IAM roles against principle 9.
 
