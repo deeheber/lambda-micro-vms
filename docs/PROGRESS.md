@@ -23,7 +23,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [!] P3-01 Sandbox run: deploy, smoke, destroy
 - [x] P3-02 README walkthrough
 - [x] P3-03 Phase 3 push and final manual checks
-- [ ] R1-01 hooks.test.ts: cover ready method check and hook reply bodies
+- [x] R1-01 hooks.test.ts: cover ready method check and hook reply bodies
 - [ ] R1-02 deploy.sh: keep waiting until the image has an active version
 
 ## Log
@@ -111,3 +111,7 @@ README rewritten; all make targets present. Interpretation: P3-01 blocked, so RE
 
 make check passed. Push: done.
 Manual check: NOT VERIFIED (human). Because P3-01 was blocked (live run denied), no .build/cloudwatch.log exists. Steps: run make deploy, make smoke, make destroy (each teed to .build/<target>.log) in the sandbox; read README.md end to end (and drop its status note); confirm the ready and run hook lines in /aws/lambda-microvms/mvm-hello (save with aws logs tail before destroy); record Open questions 2-5 answers in docs/reference/microvms-notes.md.
+
+### R1-01 — 2466012
+
+Added 3 tests to app/test/hooks.test.ts. kukulu_mutate was not available to me; ran the 3 specified mutations manually via sed on hooks.ts, each made the suite fail (killed); hooks.ts restored (no diff). Verify green.
