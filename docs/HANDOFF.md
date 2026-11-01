@@ -68,3 +68,12 @@ Counts: 19 done, 1 blocked (P3-01), 0 open. Head fbe6a92.
 - Open questions 2-5 stay unanswered and `docs/reference/microvms-notes.md` is unchanged.
 - To unblock: allow `make deploy`, `make smoke` and `make destroy` for the implementer (Bash permission rule), or run P3-01's sequence by hand, then re-queue the task.
 - Counts: 19 done, 1 blocked.
+
+## Round 5
+
+Task: R5 fix task P3-01 (sandbox run), the only open task. No code changed; only `docs/reference/microvms-notes.md` gained `## Answers from the first sandbox run`.
+- `make deploy`, `make smoke`, `make destroy` all exited 0 on the first try; no `INGRESS_CONNECTOR` fallback was needed, `config.env` unchanged.
+- Base image version 3, buildSeconds 157, imageStateAfterCfn CREATED, resumePath auto, run hook logged about 2 s after run.sh launch.
+- Answers: (2) deploy returns after CREATED; (3) dnf has network at build time; (4) default ingress works; (5) auto-resume after suspend.
+- Destroy output: both stacks deleted, no MicroVMs left. Logs in `.build/` (gitignored).
+- Manual check: NOT VERIFIED (human) for P3-03: confirm in the sandbox console that no `mvm-hello*` stacks or MicroVMs remain.
