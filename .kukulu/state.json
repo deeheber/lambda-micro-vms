@@ -14,24 +14,10 @@
   },
   "signing": null,
   "rounds": [],
-  "timeline": [
-    {
-      "event": "start",
-      "stage": "plan",
-      "round": 0,
-      "at": "2026-11-01T19:52:06.289Z"
-    },
-    {
-      "event": "end",
-      "stage": "plan",
-      "round": 0,
-      "at": "2026-11-01T20:14:26.376Z"
-    },
-    {
-      "event": "start",
-      "stage": "implement",
-      "round": 0,
-      "at": "2026-11-01T20:14:26.376Z"
-    }
-  ]
+  "archived": {
+    "slug": "hello-world",
+    "dir": "docs/flights/hello-world",
+    "at": "2026-11-01T21:01:06.749Z"
+  },
+  "breaking": false
 }

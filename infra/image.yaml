@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Lambda MicroVMs hello world - image stack. One MicroVM image built from the
+  zipped app that deploy.sh uploaded.
+
+# Concept: a MicroVM image is built by the platform from a Dockerfile, started,
+# warmed until the ready hook answers 200, then snapshotted. This stack is the
+# part that changes whenever the app does; the roles, bucket and log group it
+# needs live in the bootstrap stack and are imported by name.
+
+Parameters:
+  BootstrapStackName:
+    Type: String
+    Default: mvm-hello-bootstrap
+    Description: Name of the bootstrap stack whose exports this stack imports.
+  ImageName:
+    Type: String
+    Default: mvm-hello
+    AllowedPattern: '^[a-zA-Z0-9-_]+$'
+    Description: Image name. Create-only - changing it replaces the image.
+  ImageDescription:
+    Type: String
+    Default: Lambda MicroVMs hello world
+    Description: Image description (required by the service).
+  BaseImageVersion:
+    Type: String
+    AllowedPattern: '^\S+$'
+    Description: Managed base image version. deploy.sh always resolves and passes it.
+  ArtifactUri:
+    Type: String
+    AllowedPattern: '^s3://\S+$'
+    Description: >-
+      s3:// URI of the content-hashed app zip. A new hash is a changed property,
+      which is what triggers a new image version.
+  MemoryMiB:
+    Type: Number
+    Default: 2048
+    Description: Minimum memory baseline in MiB.
+  HooksPort:
+    Type: Number
+    Default: 9000
+    MinValue: 1
+    MaxValue: 65535
+    Description: Port the lifecycle hooks server listens on. Must match the Dockerfile.
+  ReadyTimeoutInSeconds:
+    Type: Number
+    Default: 30
+    MinValue: 1
+    MaxValue: 3600
+    Description: How long the build waits for the ready hook.
+  RunTimeoutInSeconds:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 60
+    Description: How long the run hook may take.
+
+Resources:
+  # Name is create-only; every other property change creates a new image version.
+  Image:
+    Type: AWS::Lambda::MicrovmImage
+    Properties:
+      Name: !Ref ImageName
+      Description: !Ref ImageDescription
+      # The build runs as this role (from the bootstrap stack).
+      BuildRoleArn:
+        Fn::ImportValue: !Sub '${BootstrapStackName}-BuildRoleArn'
+      # The managed al2023 base image; the Dockerfile's FROM line must agree.
+      BaseImageArn: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:aws:microvm-image:al2023-1'
+      BaseImageVersion: !Ref BaseImageVersion
+      CodeArtifact:
+        Uri: !Ref ArtifactUri
+      CpuConfigurations:
+        - Architecture: ARM_64
+      Resources:
+        - MinimumMemoryInMiB: !Ref MemoryMiB
+      # Build-time internet access, so the Dockerfile's dnf install can reach its repos.
+      EgressNetworkConnectors:
+        - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:aws:network-connector:aws-network-connector:INTERNET_EGRESS'
+      AdditionalOsCapabilities: []
+      EnvironmentVariables: []
+      Logging:
+        CloudWatch:
+          LogGroup:
+            Fn::ImportValue: !Sub '${BootstrapStackName}-LogGroupName'
+      # Only ready (image hook) and run (MicroVM hook) are on; the rest stay off
+      # to keep this example minimal.
+      Hooks:
+        Port: !Ref HooksPort
+        MicrovmImageHooks:
+          Ready: ENABLED
+          ReadyTimeoutInSeconds: !Ref ReadyTimeoutInSeconds
+          Validate: DISABLED
+        MicrovmHooks:
+          Run: ENABLED
+          RunTimeoutInSeconds: !Ref RunTimeoutInSeconds
+          Resume: DISABLED
+          Suspend: DISABLED
+          Terminate: DISABLED
+
+# Read by deploy.sh, run.sh and destroy.sh.
+Outputs:
+  ImageArn:
+    Value: !GetAtt Image.ImageArn
+  LatestActiveImageVersion:
+    Value: !GetAtt Image.LatestActiveImageVersion

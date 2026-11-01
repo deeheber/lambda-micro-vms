@@ -60,8 +60,8 @@
   "build": [],
   "baseBranch": "main",
   "branchPrefix": "build/",
-  "maxRounds": 3,
-  "maxRoundsHard": 6,
+  "maxRounds": 4,
+  "maxRoundsHard": 4,
   "flight": "hello-world",
   "mutation": {
     "targeted": {

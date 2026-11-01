@@ -145,3 +145,13 @@ aws lambda-microvms get-microvm-image --image-identifier <imageArn>   # image st
 - CloudFormation resource: https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-lambda-microvmimage.html
 - Launch blog: https://aws.amazon.com/blogs/compute/announcing-lambda-microvms-serverless-compute-environments-with-vm-level-isolation-and-near-instant-startup/
 - The AWS agent skill `aws-lambda-microvms` (through the AWS MCP server): SKILL.md, getting-started, lifecycle-model, iam-and-security.
+
+## Answers from the first sandbox run
+
+Base image version 3 (newest, resolved at deploy time); image build time (`buildSeconds`, the whole `cloudformation deploy` of the image stack) 157 s.
+
+- Open question 2: `cloudformation deploy` returned only after the image reached `CREATED` (`imageStateAfterCfn` = `CREATED`), so no extra polling is needed. [tested 2026-11-01]
+- Open question 3: `dnf install -y nodejs24` had network access at build time; the build log in CloudWatch shows nodejs24 24.22.1 downloaded and installed. [tested 2026-11-01]
+- Open question 4: no ingress setting was needed; the default (`INGRESS_CONNECTOR` unchanged) worked, so the `HTTP_INGRESS` fallback was not applied. [tested 2026-11-01]
+- Open question 5: auto-resume triggered after an explicit suspend: `resumePath` = `auto`. [tested 2026-11-01]
+- Run hook timing: `run.sh` launch line at 20:53:10Z, `run` hook logged at 20:53:12.399Z, about 2 s later. [tested 2026-11-01]
