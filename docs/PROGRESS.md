@@ -22,7 +22,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-09 Phase 2 push and IAM review
 - [!] P3-01 Sandbox run: deploy, smoke, destroy
 - [x] P3-02 README walkthrough
-- [ ] P3-03 Phase 3 push and final manual checks
+- [x] P3-03 Phase 3 push and final manual checks
 
 ## Log
 
@@ -104,3 +104,8 @@ BLOCKED: Tried: preflight passed (EXPECTED_ACCOUNT_ID set, not recorded), then `
 ### P3-02 — 69f569f
 
 README rewritten; all make targets present. Interpretation: P3-01 blocked, so README has a status note that live results are unrecorded and no numbers. Remove that note once P3-01 is run by a human.
+
+### P3-03 — 67bd1bc
+
+make check passed. Push: done.
+Manual check: NOT VERIFIED (human). Because P3-01 was blocked (live run denied), no .build/cloudwatch.log exists. Steps: run make deploy, make smoke, make destroy (each teed to .build/<target>.log) in the sandbox; read README.md end to end (and drop its status note); confirm the ready and run hook lines in /aws/lambda-microvms/mvm-hello (save with aws logs tail before destroy); record Open questions 2-5 answers in docs/reference/microvms-notes.md.
