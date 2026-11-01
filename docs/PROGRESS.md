@@ -20,7 +20,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-07 smoke.sh end-to-end lifecycle check
 - [x] P2-08 destroy.sh ordered teardown
 - [x] P2-09 Phase 2 push and IAM review
-- [ ] P3-01 Sandbox run: deploy, smoke, destroy
+- [!] P3-01 Sandbox run: deploy, smoke, destroy
 - [x] P3-02 README walkthrough
 - [x] P3-03 Phase 3 push and final manual checks
 - [x] R1-01 hooks.test.ts: cover ready method check and hook reply bodies
@@ -131,3 +131,7 @@ BLOCKED: Preflight passed (EXPECTED_ACCOUNT_ID set), but the permission classifi
 ### P3-01 — unblocked (round 3)
 
 Round 3: second identical re-block. No branch content changed between round 2 and round 3, and categories 1-3 are clean. The only remaining blocker is the permission classifier denying `make deploy`, which only a human operator can clear: allow a Bash permission rule for `make deploy/smoke/destroy`, or run P3-01 by hand. Unblocked only because the submit tool accepts no other CHANGES REQUESTED submission. Try `make deploy` once, per the sandbox-run protocol. If it is denied, re-block immediately with the same reason: no retry, no workaround. Always run `make destroy` if anything was created.
+
+### P3-01 — blocked
+
+BLOCKED: Tried: preflight passed (EXPECTED_ACCOUNT_ID set), then `make deploy` per the sandbox-run protocol. The permission classifier denied it ("Production Deploy"), so no AWS call ran and nothing was created; no destroy needed. Not worked around. Fix: operator adds a Bash permission rule allowing `make deploy/smoke/destroy` for this sandbox, or runs the P3-01 sequence by hand, then re-queues the task.
