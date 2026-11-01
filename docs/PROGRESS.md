@@ -12,7 +12,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P1-05 Dockerfile on the snapshot-safe base image
 - [x] P1-06 Phase 1 push and manual container check
 - [x] P2-01 Bootstrap stack template
-- [ ] P2-02 Image stack template
+- [x] P2-02 Image stack template
 - [ ] P2-03 deploy.sh with deterministic packaging
 - [ ] P2-04 run.sh launches one MicroVM
 - [ ] P2-05 call.sh mints a token and calls the MicroVM
@@ -62,3 +62,7 @@ Interpretation: empty commit carries the task ID.
 ### P2-01 — ee1799d
 
 cfn-lint clean, make check includes cfn-lint now. Exports: ${StackName}-{ArtifactBucketName,BuildRoleArn,ExecutionRoleArn,LogGroupName}. Log group name /aws/lambda-microvms/${ImageName}.
+
+### P2-02 — cb2e518
+
+cfn-lint clean. Params: BootstrapStackName, ImageName, ImageDescription, BaseImageVersion, ArtifactUri, MemoryMiB, HooksPort, ReadyTimeoutInSeconds, RunTimeoutInSeconds (deploy.sh must pass the last six as needed). Outputs ImageArn, LatestActiveImageVersion.
