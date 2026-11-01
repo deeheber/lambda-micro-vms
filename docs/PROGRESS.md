@@ -5,7 +5,7 @@ Started: 2026-11-01T20:14:36.407Z
 
 ## Tasks
 
-- [ ] P1-01 Scaffold app package, config, lib.sh and Makefile
+- [x] P1-01 Scaffold app package, config, lib.sh and Makefile
 - [ ] P1-02 App server request handler
 - [ ] P1-03 Hooks server request handler
 - [ ] P1-04 Entry point starting both servers
@@ -27,3 +27,10 @@ Started: 2026-11-01T20:14:36.407Z
 ## Log
 
 (one entry per task, appended by implement)
+
+### P1-01 — 58d2005
+
+Tests: app/test/state.test.ts (3). make check green; sandbox guard and region export verified offline.
+Interpretation: AWS_PARTITION is set/exported only by assert_sandbox; managed_connector_arn/base_image_arn need it called first.
+Config keys: all SPEC section 5 keys plus POLL_INTERVAL_SECONDS, IMAGE_WAIT_SECONDS, TERMINATE_WAIT_SECONDS, INGRESS_CONNECTOR.
+Installed: typescript ^7.0.2, @types/node ^24.19.2.
