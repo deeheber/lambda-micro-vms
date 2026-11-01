@@ -24,7 +24,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P3-02 README walkthrough
 - [x] P3-03 Phase 3 push and final manual checks
 - [x] R1-01 hooks.test.ts: cover ready method check and hook reply bodies
-- [ ] R1-02 deploy.sh: keep waiting until the image has an active version
+- [x] R1-02 deploy.sh: keep waiting until the image has an active version
 
 ## Log
 
@@ -115,3 +115,7 @@ Manual check: NOT VERIFIED (human). Because P3-01 was blocked (live run denied),
 ### R1-01 — 2466012
 
 Added 3 tests to app/test/hooks.test.ts. kukulu_mutate was not available to me; ran the 3 specified mutations manually via sed on hooks.ts, each made the suite fail (killed); hooks.ts restored (no diff). Verify green.
+
+### R1-02 — 6399524
+
+deploy.sh first wait loop now breaks only when state CREATED/UPDATED and latestActiveImageVersion non-empty; logs once otherwise. Offline aws stub (scratch, not committed): fixed exits 0 with imageVersion 1.0; pre-fix exits 1. bash -n and kukulu_verify green. Update-path stale-version question left for live run.
