@@ -143,6 +143,7 @@ deadline=$((SECONDS + IMAGE_WAIT_SECONDS))
 first_state=""
 image_state=""
 image_version=""
+noted_no_version=""
 while true; do
   image_json="$(aws lambda-microvms get-microvm-image --image-identifier "$image_arn" --output json)"
   image_state="$(jq -r '.state' <<<"$image_json")"
@@ -153,7 +154,14 @@ while true; do
   fi
   case "$image_state" in
     *_FAILED) die "image build failed: state $image_state" ;;
-    CREATED | UPDATED) break ;;
+    CREATED | UPDATED)
+      # State alone is not enough: the version ID appears a moment later.
+      [ -z "$image_version" ] || break
+      if [ -z "$noted_no_version" ]; then
+        log "image state $image_state but no active version yet; waiting"
+        noted_no_version=1
+      fi
+      ;;
   esac
   [ "$SECONDS" -lt "$deadline" ] || die "timed out waiting for image state (last: $image_state)"
   log "image state $image_state; waiting"
