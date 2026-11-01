@@ -60,7 +60,7 @@ Edits for the human to make to SPEC.md, or to PLAN.md and the constraints:
 - **The Phase 3 failure order loses the build log**, because destroy deletes the log group. Logs are now saved before destroy.
 - **"Records each answer under `Decisions`" is ambiguous.** The answers went into the progress log and `microvms-notes.md`.
 - **`BaseImageVersion` defaults to empty, but the schema requires `minLength: 1`.** The CFN parameter has no default, and `deploy.sh` always passes a value.
-- **A stale or empty `LatestActiveImageVersion` output** is handled by `run.sh`'s fallback.
+- **An empty `LatestActiveImageVersion` output** is handled by `run.sh`'s fallback to `get-microvm-image`. A stale (non-empty) output is not detected by `run.sh`; `deploy.sh` waits for the new active version on a re-deploy, but the update path is untested.
 - **Hook log line for a 404:** unknown paths log nothing.
 - **`LogGroup.Arn` ends in `:*`.** The ARN is built with `!Sub` instead.
 - **Packaging determinism:** default `zip` embeds mtimes, so packaging is normalized.

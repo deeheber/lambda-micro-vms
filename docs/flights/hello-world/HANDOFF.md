@@ -1,5 +1,7 @@
 # Handoff
 
+> Final status: P3-01 is done. The sandbox run (deploy, smoke, destroy) passed in round 5, and review round 6 approved. The sections below are the round-by-round log; the initial-run sections that follow say P3-01 was blocked, which was true at the time. See "Round 5" for the run.
+
 - Branch: `build/2026-11-01`, base `main` (merge-base from `git merge-base HEAD main`).
 - Tasks: 18 total; 17 done, 1 blocked (P3-01), 0 skipped.
 - Offline checks: `kukulu_verify` and `make check` are green (13 unit tests, typecheck, cfn-lint, script syntax, all constraints, arm64 Docker build).

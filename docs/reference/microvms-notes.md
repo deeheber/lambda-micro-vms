@@ -150,7 +150,7 @@ aws lambda-microvms get-microvm-image --image-identifier <imageArn>   # image st
 
 Base image version 3 (newest, resolved at deploy time); image build time (`buildSeconds`, the whole `cloudformation deploy` of the image stack) 157 s.
 
-- Open question 2: `cloudformation deploy` returned only after the image reached `CREATED` (`imageStateAfterCfn` = `CREATED`), so no extra polling is needed. [tested 2026-11-01]
+- Open question 2: `cloudformation deploy` returned only after the image reached `CREATED` (`imageStateAfterCfn` = `CREATED`) on a first create. That does not show the active version was usable at that moment, and the update path was not tested, so `deploy.sh` keeps polling for the active version (and, on a re-deploy, for a new one). [tested 2026-11-01, create path only]
 - Open question 3: `dnf install -y nodejs24` had network access at build time; the build log in CloudWatch shows nodejs24 24.22.1 downloaded and installed. [tested 2026-11-01]
 - Open question 4: no ingress setting was needed; the default (`INGRESS_CONNECTOR` unchanged) worked, so the `HTTP_INGRESS` fallback was not applied. [tested 2026-11-01]
 - Open question 5: auto-resume triggered after an explicit suspend: `resumePath` = `auto`. [tested 2026-11-01]

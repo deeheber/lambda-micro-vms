@@ -2,7 +2,7 @@
 
 Version: 0.2 Status: ready for flight
 
-The Kūkulu planner reads this file in full and derives the build plan from it. Facts about the service, verified on 2026-10-31 and 2026-11-01, are in [`docs/reference/microvms-notes.md`](reference/microvms-notes.md). The CloudFormation resource schema is in [`docs/reference/microvmimage-schema.json`](reference/microvmimage-schema.json). Read both before planning.
+The Kūkulu planner reads this file in full and derives the build plan from it. Facts about the service, verified on 2026-10-31 and 2026-11-01, are in [`docs/reference/microvms-notes.md`](../../reference/microvms-notes.md). The CloudFormation resource schema is in [`docs/reference/microvmimage-schema.json`](../../reference/microvmimage-schema.json). Read both before planning.
 
 ## 1. Overview
 
@@ -307,5 +307,5 @@ The operator sets `EXPECTED_ACCOUNT_ID` (and optionally `AWS_PROFILE`), exported
 
 ## Appendix: reference files
 
-- [`docs/reference/microvms-notes.md`](reference/microvms-notes.md): verified service facts, CLI shapes, gotchas, and source URLs. The implementer should read this instead of searching the web.
-- [`docs/reference/microvmimage-schema.json`](reference/microvmimage-schema.json): the authoritative `AWS::Lambda::MicrovmImage` registry schema from `cloudformation describe-type`, including handler IAM permissions.
+- [`docs/reference/microvms-notes.md`](../../reference/microvms-notes.md): verified service facts, CLI shapes, gotchas, and source URLs. The implementer should read this instead of searching the web.
+- [`docs/reference/microvmimage-schema.json`](../../reference/microvmimage-schema.json): the authoritative `AWS::Lambda::MicrovmImage` registry schema from `cloudformation describe-type`, including handler IAM permissions.

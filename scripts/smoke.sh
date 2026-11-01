@@ -11,9 +11,11 @@ source "$SCRIPT_DIR/lib.sh"
 assert_sandbox
 require_cmd aws jq curl
 
-# Concept: always tear down. Whatever happens below, the MicroVM is terminated
-# on exit. microvm.sh terminate is harmless when nothing was launched.
-trap '"$SCRIPT_DIR/microvm.sh" terminate >/dev/null || true' EXIT
+# Concept: always tear down. Whatever happens below, the MicroVM this run
+# started is terminated on exit. microvm_id stays empty until run.sh has
+# written a new record, so a stale record from an earlier run is never touched.
+microvm_id=""
+trap '[ -z "$microvm_id" ] || "$SCRIPT_DIR/microvm.sh" terminate >/dev/null || true' EXIT
 
 step=1
 

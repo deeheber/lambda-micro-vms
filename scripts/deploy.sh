@@ -117,6 +117,25 @@ aws s3 cp "$ZIP_PATH" "$artifact_uri" --only-show-errors >&2
 # --- 8. Image stack ----------------------------------------------------------
 # Concept: a new artifact URI is a changed property, so CloudFormation asks the
 # service for a new image version, which builds and snapshots the app.
+# On a re-deploy the image already has an active version, and it stays active
+# while the new one builds. Remember it, so step 9 can wait for a NEW version
+# instead of accepting the old one. Only the artifact or the base image version
+# is expected to produce one.
+prev_version=""
+expect_new_version=""
+if prev_stack_json="$(aws cloudformation describe-stacks --stack-name "$IMAGE_STACK" --output json 2>/dev/null)"; then
+  prev_param() { jq -r --arg k "$1" '.Stacks[0].Parameters[]? | select(.ParameterKey==$k) | .ParameterValue' <<<"$prev_stack_json"; }
+  prev_image_arn="$(jq -r '.Stacks[0].Outputs[]? | select(.OutputKey=="ImageArn") | .OutputValue' <<<"$prev_stack_json")"
+  if [ -n "$prev_image_arn" ]; then
+    prev_version="$(aws lambda-microvms get-microvm-image --image-identifier "$prev_image_arn" --output json \
+      | jq -r '.latestActiveImageVersion // ""')"
+  fi
+  if [ -n "$prev_version" ] && { [ "$(prev_param ArtifactUri)" != "$artifact_uri" ] \
+    || [ "$(prev_param BaseImageVersion)" != "$base_version" ]; }; then
+    expect_new_version=1
+    log "active version before deploy: $prev_version; waiting for a newer one"
+  fi
+fi
 build_start=$SECONDS
 log "deploying $IMAGE_STACK"
 aws cloudformation deploy \
@@ -155,10 +174,13 @@ while true; do
   case "$image_state" in
     *_FAILED) die "image build failed: state $image_state" ;;
     CREATED | UPDATED)
-      # State alone is not enough: the version ID appears a moment later.
-      [ -z "$image_version" ] || break
+      # State alone is not enough: the version ID appears a moment later, and
+      # on a re-deploy the old version stays active until the new one is.
+      if [ -n "$image_version" ] && { [ -z "$expect_new_version" ] || [ "$image_version" != "$prev_version" ]; }; then
+        break
+      fi
       if [ -z "$noted_no_version" ]; then
-        log "image state $image_state but no active version yet; waiting"
+        log "image state $image_state but no new active version yet; waiting"
         noted_no_version=1
       fi
       ;;
