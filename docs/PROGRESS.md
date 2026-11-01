@@ -14,7 +14,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-01 Bootstrap stack template
 - [x] P2-02 Image stack template
 - [x] P2-03 deploy.sh with deterministic packaging
-- [ ] P2-04 run.sh launches one MicroVM
+- [x] P2-04 run.sh launches one MicroVM
 - [ ] P2-05 call.sh mints a token and calls the MicroVM
 - [ ] P2-06 microvm.sh status, suspend, resume, terminate
 - [ ] P2-07 smoke.sh end-to-end lifecycle check
@@ -71,3 +71,7 @@ cfn-lint clean. Params: BootstrapStackName, ImageName, ImageDescription, BaseIma
 
 Verified offline: --package-only sha identical x3 (incl. touch of src), zip root has Dockerfile, src/, package*.json, tsconfig.json; HOOKS_PORT mismatch exits 1 naming key. AWS path NOT run.
 Interpretation: touch stamp built via tr from "1980-01-01 00:00" because 198001010000 trips the no-account-id constraint. stdout JSON adds buildSeconds via --argjson of arithmetic. Reads ImageArn via stack_output. Zip also contains package.json, package-lock.json, tsconfig.json.
+
+### P2-04 — 02d9f0f
+
+bash -n and sandbox guard verified offline; AWS path not run. Writes .build/microvm.json {microvmId,endpoint} and prints it. Uses ${ingress_args[@]+...} idiom for empty arrays under set -u (bash 3.2 safe).
