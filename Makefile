@@ -47,3 +47,4 @@ check: app/node_modules
 	npm --prefix app run typecheck
 	npm --prefix app test
 	bash -n scripts/*.sh
+	cfn-lint infra/*.yaml
