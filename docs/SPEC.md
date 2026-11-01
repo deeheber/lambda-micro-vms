@@ -73,7 +73,7 @@ Each rule can be checked with a grep or a test. A violation is the most severe r
 10. **Always tear down.**
     - `smoke.sh` sets `trap` on `EXIT`, which terminates the MicroVM it started.
     - `destroy.sh` runs these steps in order, and each step tolerates "already gone":
-      1. terminate the MicroVM in `.build/microvm.json`, if present;
+      1. terminate the MicroVM in `.build/microvm.json`, if present, then every MicroVM returned by `list-microvms --image-identifier <ImageArn>` whose state is not `TERMINATING` or `TERMINATED`;
       2. delete the image stack and wait;
       3. empty the artifact bucket;
       4. delete the bootstrap stack and wait.
@@ -214,7 +214,7 @@ Paths are under `/aws/lambda-microvms/runtime/v1/`.
     - `--logging` pointing at the log group;
     - ingress and egress managed connectors (see Open question 4).
   - Writes `.build/microvm.json` = `{"microvmId","endpoint"}`. Endpoints come back without a scheme; scripts prepend `https://`.
-  - If `run.sh` dies before writing the file, the MicroVM is unrecorded. The idle policy suspends it after `IDLE_MAX_SECONDS` and `MAX_DURATION_SECONDS` bounds its life; `aws lambda-microvms list-microvms` finds it for an earlier `terminate-microvm`.
+  - If `run.sh` dies before writing the file, the MicroVM is unrecorded. The idle policy suspends it after `IDLE_MAX_SECONDS` and `MAX_DURATION_SECONDS` bounds its life. `make destroy` terminates it anyway: step 1 of principle 10 terminates every live MicroVM launched from this repo's image (`list-microvms --image-identifier <ImageArn>`), so an unrecorded one can't be missed or confused with MicroVMs from other images.
 - **`call.sh [path]`**
   - Mints a token: `create-microvm-auth-token --microvm-identifier <microvmId from .build/microvm.json> --allowed-ports '[{"port":APP_PORT}]' --expiration-in-minutes TOKEN_TTL_MINUTES`, reading `authToken."X-aws-proxy-auth"`.
   - Curls with `-fsS --max-time CURL_MAX_TIME_SECONDS`, sending the `X-aws-proxy-auth` and `X-aws-proxy-port: APP_PORT` headers from stdin (`printf 'X-aws-proxy-auth: %s\nX-aws-proxy-port: %s\n' "$TOKEN" "$APP_PORT" | curl -H @- …`) and printing the body. The token's `--allowed-ports` only authorizes the port; `X-aws-proxy-port` is what routes to it when `APP_PORT` isn't 8080.
