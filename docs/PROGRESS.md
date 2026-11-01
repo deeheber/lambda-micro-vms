@@ -8,7 +8,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P1-01 Scaffold app package, config, lib.sh and Makefile
 - [x] P1-02 App server request handler
 - [x] P1-03 Hooks server request handler
-- [ ] P1-04 Entry point starting both servers
+- [x] P1-04 Entry point starting both servers
 - [ ] P1-05 Dockerfile on the snapshot-safe base image
 - [ ] P1-06 Phase 1 push and manual container check
 - [ ] P2-01 Bootstrap stack template
@@ -44,3 +44,7 @@ Tests: app/test/app.test.ts (4). handleApp(s, method, path) -> Reply {status, bo
 Tests: app/test/hooks.test.ts (6).
 Interpretation: ready logs a line on both 503 and 200 (SPEC: every hook request logs); 404 logs null. Non-POST on ready/run is 404.
 Exports: HOOK_PREFIX, HookReply, handleHook(s, method, path, rawBody, now).
+
+### P1-04 — 87af800
+
+No new tests. Local smoke on ports 18080/19000 gave {"ready":true}, {"ok":true}, microvmId local, requestCount 1, two hook lines; missing APP_PORT exits 1.
