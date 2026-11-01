@@ -21,7 +21,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-08 destroy.sh ordered teardown
 - [x] P2-09 Phase 2 push and IAM review
 - [!] P3-01 Sandbox run: deploy, smoke, destroy
-- [ ] P3-02 README walkthrough
+- [x] P3-02 README walkthrough
 - [ ] P3-03 Phase 3 push and final manual checks
 
 ## Log
@@ -100,3 +100,7 @@ Manual check: NOT VERIFIED (human). Review BuildRole and ExecutionRole in infra/
 ### P3-01 — blocked
 
 BLOCKED: Tried: preflight passed (EXPECTED_ACCOUNT_ID set, not recorded), then `make deploy` as a background Bash call. Fails: the permission system denied the call (auto mode classifier: Protected-Scope IaC Apply), so no AWS resource was created and no destroy was needed. Fix: a human with sandbox credentials runs `make deploy`, `make smoke`, `make destroy` (each teed to .build/<target>.log), or allows these Bash commands, then records the Decisions for Open questions 2-5 in docs/reference/microvms-notes.md.
+
+### P3-02 — 69f569f
+
+README rewritten; all make targets present. Interpretation: P3-01 blocked, so README has a status note that live results are unrecorded and no numbers. Remove that note once P3-01 is run by a human.
