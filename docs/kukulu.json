@@ -1,0 +1,459 @@
+{
+  "verify": [
+    {
+      "cmd": "npm --prefix app ci",
+      "from": "P1-01"
+    },
+    {
+      "cmd": "npm --prefix app run typecheck",
+      "from": "P1-01"
+    },
+    {
+      "cmd": "npm --prefix app test",
+      "from": "P1-01"
+    },
+    {
+      "cmd": "jq -e \"(has(\\\"dependencies\\\") | not) and ((.devDependencies // {}) | keys == [\\\"@types/node\\\", \\\"typescript\\\"]) and .type == \\\"module\\\"\" app/package.json",
+      "from": "P1-01"
+    },
+    {
+      "cmd": "bash -n scripts/*.sh",
+      "from": "P1-01"
+    },
+    {
+      "cmd": "for f in scripts/*.sh; do [ \"$(sed -n 2p \"$f\")\" = \"set -euo pipefail\" ] || { echo \"$f: line 2 must be: set -euo pipefail\" >&2; exit 1; }; case \"$f\" in scripts/lib.sh) ;; *) grep -Eq \"^(source|\\.) .*lib\\.sh\" \"$f\" || { echo \"$f: must source scripts/lib.sh\" >&2; exit 1; }; [ -x \"$f\" ] || { echo \"$f: must be executable\" >&2; exit 1; } ;; esac; done",
+      "from": "P1-01"
+    },
+    {
+      "cmd": "cfn-lint infra/*.yaml",
+      "from": "P2-01"
+    }
+  ],
+  "extraVerify": {
+    "app/Dockerfile": [
+      {
+        "cmd": "docker build --platform linux/arm64 -t mvm-hello:verify app",
+        "timeoutMs": 1200000,
+        "exclusive": true,
+        "from": "P1-05"
+      },
+      {
+        "cmd": ". ./config.env && test \"$(grep -Eic \"^[[:space:]]*FROM[[:space:]]\" app/Dockerfile)\" -eq 1 && grep -Eq \"^RUN .*dnf install -y nodejs24\" app/Dockerfile && grep -qx \"ENV APP_PORT=$APP_PORT\" app/Dockerfile && grep -qx \"ENV HOOKS_PORT=$HOOKS_PORT\" app/Dockerfile",
+        "from": "P1-05"
+      }
+    ],
+    "app/src/": [
+      {
+        "cmd": "docker build --platform linux/arm64 -t mvm-hello:verify app",
+        "timeoutMs": 1200000,
+        "exclusive": true,
+        "from": "P1-05"
+      }
+    ],
+    "config.env": [
+      {
+        "cmd": ". ./config.env && test \"$(grep -Eic \"^[[:space:]]*FROM[[:space:]]\" app/Dockerfile)\" -eq 1 && grep -Eq \"^RUN .*dnf install -y nodejs24\" app/Dockerfile && grep -qx \"ENV APP_PORT=$APP_PORT\" app/Dockerfile && grep -qx \"ENV HOOKS_PORT=$HOOKS_PORT\" app/Dockerfile",
+        "from": "P1-05"
+      }
+    ]
+  },
+  "build": [],
+  "baseBranch": "main",
+  "branchPrefix": "build/",
+  "maxRounds": 3,
+  "maxRoundsHard": 6,
+  "flight": "hello-world",
+  "mutation": {
+    "targeted": {
+      "unit": {
+        "cmd": "cd app && node --test --test-name-pattern={filter} 'test/**/*.test.ts'"
+      }
+    }
+  },
+  "constraints": [
+    {
+      "id": "no-account-id",
+      "description": "Principle 1: no 12-digit AWS account ID in code or config. Templates use AWS::AccountId; scripts use EXPECTED_ACCOUNT_ID from the environment or .env.",
+      "paths": [
+        "infra/",
+        "scripts/",
+        "app/",
+        "Makefile",
+        "config.env"
+      ],
+      "pattern": "\\b[0-9]{12}\\b",
+      "shouldMatch": [
+        "EXPECTED_ACCOUNT_ID=123456789012",
+        "BuildRoleArn: arn:aws:iam::123456789012:role/build",
+        "\"aws:SourceAccount\": \"123456789012\""
+      ],
+      "shouldNotMatch": [
+        "aws:SourceAccount: !Ref AWS::AccountId",
+        "test \"$actual\" = \"$EXPECTED_ACCOUNT_ID\"",
+        "MAX_DURATION_SECONDS=1800"
+      ]
+    },
+    {
+      "id": "no-region-literal",
+      "description": "Principle 1: the default region appears only in config.env. Templates use AWS::Region; scripts use AWS_REGION exported by lib.sh.",
+      "paths": [
+        "infra/",
+        "scripts/",
+        "app/",
+        "Makefile"
+      ],
+      "pattern": "\\b(us|eu|ap|sa|ca|me|af)-[a-z]+-[0-9]\\b",
+      "shouldMatch": [
+        "export AWS_REGION=us-west-2",
+        "arn:aws:lambda:us-west-2:aws:microvm-image:al2023-1",
+        "aws s3 cp \"$zip\" \"s3://$bucket/artifacts/\" --region eu-central-1"
+      ],
+      "shouldNotMatch": [
+        "export AWS_REGION=\"${AWS_REGION:-$REGION}\"",
+        "BaseImageArn: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:aws:microvm-image:al2023-1'",
+        "aws lambda-microvms get-microvm --microvm-identifier \"$id\""
+      ]
+    },
+    {
+      "id": "infra-no-hardcoded-integers",
+      "description": "Principle 2: in infra/*.yaml a line ending in an integer is allowed only for Default, MinValue or MaxValue keys (which must sit inside Parameters:, checked by reading). Quoted integers and trailing comments are covered too.",
+      "paths": [
+        "infra/"
+      ],
+      "pattern": "^(?![\\s-]*(Default|MinValue|MaxValue)\\s*:)[^#]*:\\s+['\"]?[0-9]+['\"]?\\s*(#.*)?$",
+      "shouldMatch": [
+        "      RetentionInDays: 7",
+        "        - Port: 9000",
+        "      ReadyTimeoutInSeconds: '30'",
+        "        MinimumMemoryInMiB: 2048  # 2 GB",
+        "    MinLength: 1"
+      ],
+      "shouldNotMatch": [
+        "    Default: 9000",
+        "    MinValue: 60",
+        "    MaxValue: 65535",
+        "      RetentionInDays: !Ref LogRetentionDays",
+        "AWSTemplateFormatVersion: '2010-09-09'",
+        "        Version: '2012-10-17'",
+        "# HooksPort: 9000 is the documented default",
+        "        - MinimumMemoryInMiB: !Ref MemoryMiB"
+      ]
+    },
+    {
+      "id": "dockerfile-base-image",
+      "description": "Principle 5: the only allowed FROM is the snapshot-safe al2023-minimal MicroVM base image (that exactly one FROM exists is checked by a verify command).",
+      "paths": [
+        "app/Dockerfile"
+      ],
+      "pattern": "^\\s*FROM\\s+(?!public\\.ecr\\.aws/lambda/microvms:al2023-minimal\\s*$)",
+      "flags": "i",
+      "shouldMatch": [
+        "FROM node:24-alpine",
+        "FROM public.ecr.aws/lambda/microvms:al2023-minimal AS build",
+        "from public.ecr.aws/amazonlinux/amazonlinux:2023"
+      ],
+      "shouldNotMatch": [
+        "FROM public.ecr.aws/lambda/microvms:al2023-minimal",
+        "# FROM node:24 would bundle its own OpenSSL",
+        "RUN dnf install -y nodejs24 && dnf clean all"
+      ]
+    },
+    {
+      "id": "dockerfile-no-foreign-node",
+      "description": "Principle 5: Node comes only from dnf install -y nodejs24, never a node: image, a curl/wget download or nvm. Comment lines are exempt so the Dockerfile can explain why.",
+      "paths": [
+        "app/Dockerfile"
+      ],
+      "pattern": "^(?!\\s*#).*(\\bnode:[0-9a-z]|\\b(curl|wget|nvm)\\b)",
+      "flags": "i",
+      "shouldMatch": [
+        "COPY --from=node:24 /usr/local/bin/node /usr/bin/node",
+        "RUN curl -fsSL https://nodejs.org/dist/v24.0.0/node-v24.0.0-linux-arm64.tar.xz | tar -xJ",
+        "RUN wget -qO- https://example.com/node.tar.gz",
+        "RUN nvm install 24"
+      ],
+      "shouldNotMatch": [
+        "RUN dnf install -y nodejs24 && dnf clean all",
+        "# Not node:24 or nvm: those bundle their own OpenSSL, which is not snapshot-safe.",
+        "CMD [\"node\", \"src/main.ts\"]"
+      ]
+    },
+    {
+      "id": "no-runtime-dependencies",
+      "description": "Principle 6: app/package.json has no dependencies (or peer/optional/bundled dependencies) key. Scoped to package.json only; the lockfile legitimately lists transitive dependencies.",
+      "paths": [
+        "app/package.json"
+      ],
+      "pattern": "\"(dependencies|peerDependencies|optionalDependencies|bundleDependencies|bundledDependencies)\"\\s*:",
+      "shouldMatch": [
+        "  \"dependencies\": {",
+        "  \"peerDependencies\": { \"express\": \"^5.0.0\" },",
+        "  \"optionalDependencies\": {}"
+      ],
+      "shouldNotMatch": [
+        "  \"devDependencies\": {",
+        "    \"@types/node\": \"^24.0.0\",",
+        "    \"typescript\": \"^5.9.0\""
+      ]
+    },
+    {
+      "id": "app-imports-node-or-relative-ts",
+      "description": "Principle 6: files in app/src/ and app/test/ import only node:* modules and relative paths ending in .ts.",
+      "paths": [
+        "app/src/",
+        "app/test/"
+      ],
+      "pattern": "(\\bfrom\\s+|\\bimport\\s*\\(\\s*|^\\s*import\\s+|\\brequire\\s*\\(\\s*)['\"](?!node:)(?!\\.{1,2}/[^'\"]*\\.ts['\"])",
+      "shouldMatch": [
+        "import http from 'http';",
+        "import { state } from './state';",
+        "import { state } from \"./state.js\";",
+        "const fs = await import('fs');",
+        "import 'dotenv/config';",
+        "const express = require('express');",
+        "export { handleApp } from 'some-package';"
+      ],
+      "shouldNotMatch": [
+        "import { createServer } from 'node:http';",
+        "import { randomUUID } from \"node:crypto\";",
+        "import { createState } from './state.ts';",
+        "import type { State } from '../src/state.ts';",
+        "// the response body comes from the handler"
+      ]
+    },
+    {
+      "id": "app-no-localhost",
+      "description": "Principle 7: no localhost or 127.0.0.1 in app/src/; both servers listen on 0.0.0.0.",
+      "paths": [
+        "app/src/"
+      ],
+      "pattern": "localhost|127\\.0\\.0\\.1",
+      "flags": "i",
+      "shouldMatch": [
+        "appServer.listen(appPort, 'localhost');",
+        "hooksServer.listen(hooksPort, '127.0.0.1', onListening);"
+      ],
+      "shouldNotMatch": [
+        "appServer.listen(appPort, '0.0.0.0');",
+        "const HOST = '0.0.0.0';"
+      ]
+    },
+    {
+      "id": "app-no-math-random",
+      "description": "Principle 8: no Math.random in app/src/; per-instance values come from crypto.randomUUID() in the run hook.",
+      "paths": [
+        "app/src/"
+      ],
+      "pattern": "Math\\s*(\\.|\\[\\s*['\"])random",
+      "shouldMatch": [
+        "const id = Math.random().toString(36);",
+        "const r = Math['random']();"
+      ],
+      "shouldNotMatch": [
+        "state.instanceId = randomUUID();",
+        "const n = Math.max(0, count);"
+      ]
+    },
+    {
+      "id": "randomuuid-only-in-hooks",
+      "description": "Principle 8: instanceId is generated only inside the /run hook handler in app/src/hooks.ts, so no other source file may call randomUUID.",
+      "paths": [
+        "app/src/"
+      ],
+      "exclude": [
+        "app/src/hooks.ts"
+      ],
+      "pattern": "randomUUID",
+      "shouldMatch": [
+        "import { randomUUID } from 'node:crypto';",
+        "instanceId: crypto.randomUUID(),"
+      ],
+      "shouldNotMatch": [
+        "instanceId: null,",
+        "state.instanceId = null;"
+      ]
+    },
+    {
+      "id": "iam-no-wildcard-resource",
+      "description": "Principle 9: no bare Resource '*'. A wildcard inside an ARN that SPEC requires (log streams '${LogGroup.Arn}:*', bucket keys '.../artifacts/*') is allowed.",
+      "paths": [
+        "infra/"
+      ],
+      "pattern": "(Resource\\s*:\\s*\\[?\\s*['\"]?\\*['\"]?\\s*(\\]|#.*)?\\s*$|^\\s*-\\s*['\"]?\\*['\"]?\\s*(#.*)?$)",
+      "shouldMatch": [
+        "            Resource: '*'",
+        "            Resource: \"*\"",
+        "            Resource: *",
+        "            Resource: ['*']",
+        "              - '*'"
+      ],
+      "shouldNotMatch": [
+        "              - !Sub '${LogGroup.Arn}:*'",
+        "            Resource: !Sub '${ArtifactBucket.Arn}/artifacts/*'",
+        "              - !GetAtt LogGroup.Arn",
+        "            Resource:"
+      ]
+    },
+    {
+      "id": "iam-no-wildcard-action",
+      "description": "Principle 9: no IAM Action containing '*', whether inline or as a list item.",
+      "paths": [
+        "infra/"
+      ],
+      "pattern": "(\\bAction\\s*:[^#]*\\*|^\\s*-\\s*['\"]?[a-z0-9-]+:[A-Za-z0-9]*\\*)",
+      "shouldMatch": [
+        "            Action: 's3:*'",
+        "            Action: logs:*",
+        "            Action: [s3:GetObject, 'logs:Put*']",
+        "              - logs:*",
+        "              - 's3:Get*'"
+      ],
+      "shouldNotMatch": [
+        "              - logs:CreateLogStream",
+        "              - !Sub '${LogGroup.Arn}:*'",
+        "            Action:",
+        "              - sts:TagSession",
+        "              - arn:aws:logs:example:*"
+      ]
+    },
+    {
+      "id": "scripts-json-with-jq",
+      "description": "SPEC section 5: scripts parse JSON with jq only, never node -e/-p or python.",
+      "paths": [
+        "scripts/"
+      ],
+      "pattern": "\\bnode\\s+(-e|-p|--eval|--print)\\b|\\bpython[0-9.]*\\b",
+      "shouldMatch": [
+        "id=$(node -e 'console.log(JSON.parse(require(\"fs\").readFileSync(0)).microvmId)' < .build/microvm.json)",
+        "endpoint=$(python3 -c 'import json,sys; print(json.load(sys.stdin)[\"endpoint\"])')",
+        "node --print 'process.version'"
+      ],
+      "shouldNotMatch": [
+        "id=$(jq -r '.microvmId' \"$MICROVM_FILE\")",
+        "log \"parsed microvm.json with jq\""
+      ]
+    },
+    {
+      "id": "token-not-in-args-or-output",
+      "description": "SPEC section 6 (call.sh): the auth token reaches curl only on stdin via -H @-; it is never in a header argument, echoed, logged or teed. The variable holding it is named TOKEN.",
+      "paths": [
+        "scripts/"
+      ],
+      "pattern": "(-H|--header)[\\s=]*['\"]?X-aws-proxy-auth|\\b(echo|log|die|tee)\\b.*\\$\\{?TOKEN\\b",
+      "flags": "i",
+      "shouldMatch": [
+        "curl -fsS \"https://$endpoint$path\" -H \"X-aws-proxy-auth: $TOKEN\"",
+        "curl --header='X-aws-proxy-auth: '\"$TOKEN\" \"$url\"",
+        "echo \"$TOKEN\" > .build/token",
+        "log \"token: ${TOKEN}\""
+      ],
+      "shouldNotMatch": [
+        "printf 'X-aws-proxy-auth: %s\\nX-aws-proxy-port: %s\\n' \"$TOKEN\" \"$APP_PORT\" | curl -fsS --max-time \"$CURL_MAX_TIME_SECONDS\" -H @- \"$url\"",
+        "TOKEN=$(aws lambda-microvms create-microvm-auth-token --microvm-identifier \"$id\" --query 'authToken.\"X-aws-proxy-auth\"' --output text)",
+        "log \"minted an auth token (not shown)\""
+      ]
+    },
+    {
+      "id": "scripts-no-literal-tunables",
+      "description": "Principle 2: every numeric tunable in scripts/ comes from a config.env variable. Covers sleep, curl/CLI duration flags, JSON idle-policy and port literals, ${VAR:-N} fallbacks and timeout-like variable assignments.",
+      "paths": [
+        "scripts/"
+      ],
+      "pattern": "\\bsleep\\s+['\"]?[0-9]|--(max-time|retry[a-z-]*)[\\s=]+['\"]?[0-9]|--[a-z-]*(seconds|minutes)[\\s=]+['\"]?[0-9]|(seconds|minutes|port)['\"]?\\s*:\\s*[0-9]|\\$\\{[A-Za-z_]+:-[0-9]|\\b(?!SECONDS=)[A-Za-z_]*(timeout|seconds|minutes|interval|ttl|max)[A-Za-z_]*=['\"]?[0-9]",
+      "flags": "i",
+      "shouldMatch": [
+        "sleep 5",
+        "curl -fsS --max-time 60 -H @- \"$url\"",
+        "  --expiration-in-minutes 15 \\",
+        "  --maximum-duration-in-seconds=1800 \\",
+        "  --idle-policy '{\"maxIdleDurationSeconds\":300,\"suspendedDurationSeconds\":600,\"autoResumeEnabled\":true}' \\",
+        "  --allowed-ports '[{\"port\":8080}]' \\",
+        "timeout=\"${RESUME_WAIT_SECONDS:-30}\"",
+        "local max_wait=60",
+        "POLL_INTERVAL=2"
+      ],
+      "shouldNotMatch": [
+        "sleep \"$POLL_INTERVAL_SECONDS\"",
+        "curl -fsS --max-time \"$CURL_MAX_TIME_SECONDS\" -H @- \"$url\"",
+        "  --expiration-in-minutes \"$TOKEN_TTL_MINUTES\" \\",
+        "idle=$(jq -cn --argjson i \"$IDLE_MAX_SECONDS\" --argjson s \"$SUSPENDED_SECONDS\" '{maxIdleDurationSeconds: $i, suspendedDurationSeconds: $s, autoResumeEnabled: true}')",
+        "deadline=$((SECONDS + CALL_READY_TIMEOUT_SECONDS))",
+        "local max_wait=$((RESUME_WAIT_SECONDS * 2))",
+        "printf 'X-aws-proxy-auth: %s\\nX-aws-proxy-port: %s\\n' \"$TOKEN\" \"$APP_PORT\" | curl -H @- \"$url\"",
+        "exit 1",
+        "waited=0",
+        "retries=0"
+      ]
+    },
+    {
+      "id": "no-run-hook-payload",
+      "description": "Non-goal (SPEC section 2): no use of runHookPayload. The /run handler reads microvmId only and run.sh never passes --run-hook-payload. Not even named in comments under these paths; tests may send one to prove it is ignored.",
+      "paths": [
+        "app/src/",
+        "scripts/"
+      ],
+      "pattern": "runHookPayload|run-hook-payload",
+      "shouldMatch": [
+        "const payload = body.runHookPayload;",
+        "  --run-hook-payload \"$PAYLOAD\" \\"
+      ],
+      "shouldNotMatch": [
+        "state.microvmId = typeof body.microvmId === 'string' ? body.microvmId : null;",
+        "// any other field in the body is ignored"
+      ]
+    },
+    {
+      "id": "no-sam-or-extra-resources",
+      "description": "Non-goals (SPEC section 2): no AWS SAM, no Lambda function and no VPC NetworkConnector resource in infra/.",
+      "paths": [
+        "infra/"
+      ],
+      "pattern": "AWS::Serverless|AWS::Lambda::(NetworkConnector|Function)\\b",
+      "shouldMatch": [
+        "Transform: AWS::Serverless-2016-10-31",
+        "    Type: AWS::Lambda::NetworkConnector",
+        "    Type: AWS::Lambda::Function"
+      ],
+      "shouldNotMatch": [
+        "    Type: AWS::Lambda::MicrovmImage",
+        "        - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:aws:network-connector:aws-network-connector:INTERNET_EGRESS'"
+      ]
+    },
+    {
+      "id": "extra-hooks-disabled",
+      "description": "Non-goal (SPEC section 2): the validate, resume, suspend and terminate hooks stay DISABLED.",
+      "paths": [
+        "infra/"
+      ],
+      "pattern": "^\\s*(Validate|Resume|Suspend|Terminate)\\s*:\\s*['\"]?ENABLED",
+      "shouldMatch": [
+        "        Validate: ENABLED",
+        "        Terminate: 'ENABLED'"
+      ],
+      "shouldNotMatch": [
+        "        Validate: DISABLED",
+        "        Run: ENABLED",
+        "        Ready: ENABLED"
+      ]
+    },
+    {
+      "id": "no-extra-ingress",
+      "description": "Non-goal (SPEC section 2) and Open question 4: no ALL_INGRESS or SHELL_INGRESS connector; the only ingress choices are the default (none) or HTTP_INGRESS via INGRESS_CONNECTOR in config.env.",
+      "paths": [
+        "scripts/",
+        "infra/",
+        "config.env",
+        "Makefile"
+      ],
+      "pattern": "ALL_INGRESS|SHELL_INGRESS",
+      "shouldMatch": [
+        "INGRESS_CONNECTOR=ALL_INGRESS",
+        "  --ingress-network-connectors \"$(managed_connector_arn SHELL_INGRESS)\" \\"
+      ],
+      "shouldNotMatch": [
+        "INGRESS_CONNECTOR=",
+        "INGRESS_CONNECTOR=HTTP_INGRESS"
+      ]
+    }
+  ]
+}
