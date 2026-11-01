@@ -16,7 +16,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-03 deploy.sh with deterministic packaging
 - [x] P2-04 run.sh launches one MicroVM
 - [x] P2-05 call.sh mints a token and calls the MicroVM
-- [ ] P2-06 microvm.sh status, suspend, resume, terminate
+- [x] P2-06 microvm.sh status, suspend, resume, terminate
 - [ ] P2-07 smoke.sh end-to-end lifecycle check
 - [ ] P2-08 destroy.sh ordered teardown
 - [ ] P2-09 Phase 2 push and IAM review
@@ -79,3 +79,7 @@ bash -n and sandbox guard verified offline; AWS path not run. Writes .build/micr
 ### P2-05 — 0745e10
 
 Offline checks only (bash -n, missing-file and bad-path exit 1). Interpretation: path and microvm.json checks run before assert_sandbox since no aws call precedes it. Token on stdin via -H @-, var TOKEN.
+
+### P2-06 — b2b6e9c
+
+Offline checks passed (terminate no-file 0, status no-file 1, bogus 1). Not-found detection: stderr matching ResourceNotFound|not found (case-insens). A trailing edit after verify moved status to capture-then-jq (no behavior change to constraints); bash -n re-run.
