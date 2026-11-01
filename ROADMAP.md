@@ -15,6 +15,4 @@ The order to work through the `next-experiment` issues after the hello world. Co
 | 9 | [#2 Remaining lifecycle hooks](https://github.com/deeheber/lambda-micro-vms/issues/2) | `suspend` and `resume` matter once the app holds connections or credentials (#7, #10). `validate` is a startup-speed optimization. |
 | 10 | [#13 Claude Managed Agents sandbox](https://github.com/deeheber/lambda-micro-vms/issues/13) | Capstone. Uses #4, #7, #8 and #10. |
 
-Items that pair well as one Kūkulu flight: #8 with #4, and #16 with #17.
-
 When every issue in a row has closed, delete the row, so row 1 is always the next one to do.

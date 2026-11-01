@@ -118,7 +118,7 @@ aws s3 cp "$ZIP_PATH" "$artifact_uri" --only-show-errors >&2
 # Concept: a new artifact URI is a changed property, so CloudFormation asks the
 # service for a new image version, which builds and snapshots the app.
 # On a re-deploy the image already has an active version, and it stays active
-# while the new one builds. Remember it, so step 9 can wait for a NEW version
+# while the new one builds. Remember it, so step 9 waits for a new version
 # instead of accepting the old one. Only the artifact or the base image version
 # is expected to produce one.
 prev_version=""

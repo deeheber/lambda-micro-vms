@@ -31,7 +31,7 @@ These notes were compiled on 2026-10-31 (updated 2026-11-01) from AWS documentat
 
 **[schema]**: full schema in `microvmimage-schema.json`.
 
-- **All 13 properties are required.** See `microvmimage-schema.json` for the exact shapes, and SPEC section 4 for the values this repo uses. Two things worth knowing:
+- **All 13 properties are required.** See `microvmimage-schema.json` for the exact shapes and `infra/image.yaml` for the values this repo uses. Two things worth knowing:
   - `AdditionalOsCapabilities: []` and `EnvironmentVariables: []` are valid; neither has `minItems`.
   - `Name` is create-only, so changing it replaces the image.
 - **`Ref`** returns the image ARN.
@@ -146,12 +146,12 @@ aws lambda-microvms get-microvm-image --image-identifier <imageArn>   # image st
 - Launch blog: https://aws.amazon.com/blogs/compute/announcing-lambda-microvms-serverless-compute-environments-with-vm-level-isolation-and-near-instant-startup/
 - The AWS agent skill `aws-lambda-microvms` (through the AWS MCP server): SKILL.md, getting-started, lifecycle-model, iam-and-security.
 
-## Answers from the first sandbox run
+## First sandbox run
 
-Base image version 3 (newest, resolved at deploy time); image build time (`buildSeconds`, the whole `cloudformation deploy` of the image stack) 157 s.
+Base image version 3 (newest, resolved at deploy time). The image stack's `cloudformation deploy` took 157 s.
 
-- Open question 2: `cloudformation deploy` returned only after the image reached `CREATED` (`imageStateAfterCfn` = `CREATED`) on a first create. That does not show the active version was usable at that moment, and the update path was not tested, so `deploy.sh` keeps polling for the active version (and, on a re-deploy, for a new one). [tested 2026-11-01, create path only]
-- Open question 3: `dnf install -y nodejs24` had network access at build time; the build log in CloudWatch shows nodejs24 24.22.1 downloaded and installed. [tested 2026-11-01]
-- Open question 4: no ingress setting was needed; the default (`INGRESS_CONNECTOR` unchanged) worked, so the `HTTP_INGRESS` fallback was not applied. [tested 2026-11-01]
-- Open question 5: auto-resume triggered after an explicit suspend: `resumePath` = `auto`. [tested 2026-11-01]
-- Run hook timing: `run.sh` launch line at 20:53:10Z, `run` hook logged at 20:53:12.399Z, about 2 s later. [tested 2026-11-01]
+- Image readiness: `cloudformation deploy` returned with the image `CREATED` on a first create. That doesn't show the active version was usable yet, and the update path is untested, so `deploy.sh` keeps polling for the active version, and for a new one on a re-deploy. [tested 2026-11-01, create path only]
+- Build network: `dnf install -y nodejs24` reached the network at build time; the CloudWatch build log shows nodejs24 24.22.1 installed. [tested 2026-11-01]
+- Ingress: the default worked with `INGRESS_CONNECTOR` empty; `HTTP_INGRESS` wasn't needed. [tested 2026-11-01]
+- Auto-resume: a call to an explicitly suspended MicroVM resumed it (`resumePath` = `auto`). [tested 2026-11-01]
+- Run hook timing: the `run` hook logged about 2 s after `run.sh` launched the MicroVM. [tested 2026-11-01]
