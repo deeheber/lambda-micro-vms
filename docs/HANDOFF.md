@@ -54,3 +54,11 @@ Counts: 19 done, 1 blocked (P3-01), 0 open. Head 4ace9ab.
 - P3-01 (sandbox deploy, smoke, destroy) is BLOCKED: preflight passed (EXPECTED_ACCOUNT_ID set), but the permission classifier denied `make deploy` as a production deploy before it ran. Nothing was created, so no destroy was needed. I did not work around the denial.
 - Open questions 2-5 stay unanswered. An operator must allow the sandbox deploy (a Bash permission rule for `make deploy/smoke/destroy`) or run P3-01 by hand.
 - No code, config.env or notes changes were made this round.
+
+## Round 3
+
+Counts: 19 done, 1 blocked (P3-01), 0 open. Head fbe6a92.
+
+- P3-01 was the only open task and is BLOCKED again: preflight passed, but the permission classifier denied `make deploy` ("Production Deploy") before any AWS call. Nothing was created, so no destroy was needed. I did not work around the denial.
+- Open questions 2-5 stay unanswered. An operator must allow `make deploy/smoke/destroy` for the sandbox (a Bash permission rule) or run the P3-01 sequence by hand.
+- No code, config.env or notes changes were made this round.
