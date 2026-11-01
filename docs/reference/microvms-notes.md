@@ -37,7 +37,7 @@ These notes were compiled on 2026-10-31 (updated 2026-11-01) from AWS documentat
 - **`Ref`** returns the image ARN.
 - **`GetAtt`:** `ImageArn`, `State`, `LatestActiveImageVersion`, `LatestFailedImageVersion`, `CreatedAt`, `UpdatedAt`.
 - **States:** `CREATING`, `CREATED`, `CREATE_FAILED`, `UPDATING`, `UPDATED`, `UPDATE_FAILED`, `DELETING`, `DELETE_FAILED`, `DELETED`. These match `get-microvm-image help`. The developer guide's prose says `CREATION_FAILED`/`DELETION_FAILED`; the API doesn't use those spellings. **[tested]**
-  - After an update, the image settles in **`UPDATED`**, not `CREATED`. Anything that waits for the image must accept both. **[docs]**
+  - After an update, the image settles in `UPDATED`, not `CREATED`. Anything that waits for the image must accept both. **[docs]**
   - Image state, version state (`PENDING`, `IN_PROGRESS`, `SUCCESSFUL`, `FAILED`) and version activation (`ACTIVE`/`INACTIVE`) are independent. Running a MicroVM needs image `CREATED`/`UPDATED`, version `SUCCESSFUL`, and `ACTIVE`. **[docs]**
 - **Updates.** Changing any property except `Name` is "No interruption" and creates a **new image version**. The update handler's permissions include `lambda:DeleteMicrovmImageVersion`, so CloudFormation may clean up old versions on update.
 - **Permissions CloudFormation needs (the caller's own):**

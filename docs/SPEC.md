@@ -110,7 +110,7 @@ README.md                 walkthrough (G7)
 
 **Boundaries and shared wiring:**
 
-- `app/` never reads `config.env`. Ports reach the app through Dockerfile `ENV APP_PORT` and `ENV HOOKS_PORT` lines whose values match `config.env`. The hooks port also goes into `image.yaml` as a parameter. Changing a port means editing both files; `deploy.sh` exits 1 before packaging if the Dockerfile `ENV` values differ from `config.env`, so the two can't drift silently.
+- `app/` never reads `config.env`. Ports reach the app through Dockerfile `ENV APP_PORT` and `ENV HOOKS_PORT` lines whose values match `config.env`. The hooks port also goes into `image.yaml` as a parameter. Changing a port means editing both files; `deploy.sh` exits 1 before packaging if the Dockerfile `ENV` values differ from `config.env`.
 - `Makefile`, `config.env`, and `scripts/lib.sh` are shared wiring. The planner keeps tasks that edit them serial.
 - `app/` and `infra/` are independent and can be built in parallel.
 
@@ -165,7 +165,7 @@ Two stacks are needed because the bucket must exist and contain the zip before t
 | `RESUME_WAIT_SECONDS` | `30` | how long `smoke.sh` waits for auto-resume before calling `resume` |
 | `CALL_READY_TIMEOUT_SECONDS` | `60` | how long `smoke.sh` retries the first `call.sh /` after `run.sh` |
 | `CURL_MAX_TIME_SECONDS` | `60` | `curl --max-time` in `call.sh`; long enough that a request held during auto-resume is not abandoned |
-| `BASE_IMAGE_VERSION` / `BaseImageVersion` | *(empty)* | Empty means "latest": `deploy.sh` runs `aws lambda-microvms list-managed-microvm-image-versions --image-identifier <base image ARN>` and picks the newest `AVAILABLE` entry, comparing `imageVersion` **numerically** (`jq '[.items[]\|select(.status=="AVAILABLE")]\|max_by(.imageVersion\|tonumber).imageVersion'`). It logs the chosen value to stderr and passes it to CFN. A non-empty value pins that version. When AWS publishes a new base version, the next `make deploy` rebuilds the image on it; that is the intended patching path. |
+| `BASE_IMAGE_VERSION` / `BaseImageVersion` | *(empty)* | Empty means "latest": `deploy.sh` runs `aws lambda-microvms list-managed-microvm-image-versions --image-identifier <base image ARN>` and picks the newest `AVAILABLE` entry, comparing `imageVersion` numerically (`jq '[.items[]\|select(.status=="AVAILABLE")]\|max_by(.imageVersion\|tonumber).imageVersion'`). It logs the chosen value to stderr and passes it to CFN. A non-empty value pins that version. When AWS publishes a new base version, the next `make deploy` rebuilds the image on it; that is the intended patching path. |
 
 These come from the environment, or from a gitignored `.env` file that `lib.sh` sources if present, and are never committed:
 
@@ -273,7 +273,7 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
    - It records in the log: the `BASE_IMAGE_VERSION` that `deploy.sh` resolved, how long the image build took, `resumePath`, and the `run` hook timing from CloudWatch (`aws logs tail`).
    - It resolves Open questions 2–5 and records each answer under `Decisions`.
    - It also writes every resolved open question into `docs/reference/microvms-notes.md`, tagged `[tested <date>]`, so later flights start from the answers instead of the questions.
-   - On failure, it runs `make destroy` **first**, then **blocks** with the error and the last 50 lines of the image build log. It does not retry in a loop.
+   - On failure, it runs `make destroy` first, then **blocks** with the error and the last 50 lines of the image build log. It does not retry in a loop.
    - If the build log shows the build role could not be assumed, block the same way. Do **not** loosen the trust policies: principle 9 requires the `aws:SourceAccount` condition, and changing IAM is a human decision. Put the AssumeRole error in the block reason so the operator can decide.
 2. A `README.md` walkthrough covering:
    - prerequisites (an AWS account with admin access; `EXPECTED_ACCOUNT_ID` exported or in `.env`; AWS CLI v2, `jq`, `zip`, Node 24, Docker);
