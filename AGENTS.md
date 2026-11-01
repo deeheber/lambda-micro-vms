@@ -4,7 +4,7 @@
 
 - `make deploy`, `run`, `call`, `smoke`, `destroy` and the lifecycle targets call AWS. Run them only when asked, only against a sandbox account, and always finish with `make destroy`, even after a failure.
 - `make check` runs every offline check. Single test: `cd app && node --test --test-name-pattern=<name> 'test/**/*.test.ts'`.
-- Read `docs/reference/microvms-notes.md` for service facts instead of searching the web. Check CLI shapes offline with `aws lambda-microvms <command> help`.
+- Check CLI shapes offline with `aws lambda-microvms <command> help`.
 
 ## Design decisions
 
