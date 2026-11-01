@@ -20,7 +20,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-07 smoke.sh end-to-end lifecycle check
 - [x] P2-08 destroy.sh ordered teardown
 - [x] P2-09 Phase 2 push and IAM review
-- [!] P3-01 Sandbox run: deploy, smoke, destroy
+- [ ] P3-01 Sandbox run: deploy, smoke, destroy
 - [x] P3-02 README walkthrough
 - [x] P3-03 Phase 3 push and final manual checks
 - [x] R1-01 hooks.test.ts: cover ready method check and hook reply bodies
@@ -143,3 +143,7 @@ Round 4: third consecutive identical re-block with no branch content change sinc
 ### P3-01 — blocked
 
 BLOCKED: Tried: preflight (EXPECTED_ACCOUNT_ID set) passed, then `make deploy` in the background. The permission classifier denied it as "Production Deploy", so no AWS call was made and nothing was created (no destroy needed). Not worked around. Fix: operator must allow `make deploy/smoke/destroy` for this run (Bash permission rule) or run P3-01 manually, then re-queue the task.
+
+### P3-01 — unblocked (round 5)
+
+Round 5: fourth consecutive identical re-block. Outside docs/ and .kukulu/, the branch has not changed since 2ae6531, and categories 1-3 are clean. The only blocker is the permission classifier denying `make deploy`, which only a human operator can clear: allow a Bash permission rule for `make deploy/smoke/destroy`, or run P3-01 by hand. Unblocked only because the submit tool accepts no other CHANGES REQUESTED submission. Try `make deploy` once, per the sandbox-run protocol. If it is denied, re-block immediately with the same reason: no retry, no workaround. Always run `make destroy` if anything was created.

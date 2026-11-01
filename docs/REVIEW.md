@@ -1,25 +1,24 @@
 # Review
-Round: 4
+Round: 5
 
 **Verdict: CHANGES REQUESTED**
 
-P3-01, the live sandbox run, is still the only thing blocking approval. Round 3 unblocked it, and the permission system denied `make deploy` again ("Production Deploy"), the same way as in rounds 0 and 2. Categories 1-3 are clean across the branch. This round queues no fix tasks. It unblocks P3-01 once more, because that is the only submission the tool accepts. This is the third re-unblock in a row with no change to the branch content. A human operator has to act before this flight can reach APPROVED (see Blocked tasks).
+P3-01, the live sandbox run, is still the only thing blocking approval. Round 4 unblocked it, and the permission system denied `make deploy` again ("Production Deploy"), the same way as in rounds 0, 2 and 3. Categories 1-3 are clean across the branch. No fix task can clear this blocker. A human operator has to act, in one of two ways: (a) allow `make deploy`, `make smoke` and `make destroy` with a Bash permission rule, or (b) run P3-01 by hand (steps under Blocked tasks). This round queues no fix tasks. It unblocks P3-01 once more, because that is the only submission the tool accepts. This is the fourth re-unblock in a row with no change to the branch content.
 
-Reviewed: `build/2026-11-01` against base `18029d32e177`, at head `56525cf`, plus the feedback commit `f71078b` from this review.
+Reviewed: `build/2026-11-01` against base `18029d32e177`, at head `9debe45`, plus the feedback commit `9c95348` from this review.
 
 What I checked myself:
-- **Changes since `lastReviewCommit` (`5f09618`):** only pipeline files changed: `.kukulu/state.json`, `docs/HANDOFF.md` (the round 3 section) and `docs/PROGRESS.md` (the P3-01 re-block entry).
-  - No source, test, script, template, config, README or notes file changed.
+- **Changes since `lastReviewCommit` (`eda87ca`):** only pipeline files changed: `.kukulu/state.json`, `docs/HANDOFF.md` (the round 4 section) and `docs/PROGRESS.md` (the P3-01 re-block entry).
+  - `git diff --stat 2ae6531..HEAD -- . ':!docs' ':!.kukulu'` is empty. Outside `docs/` and `.kukulu/`, the tree is byte-identical to what the round 2 review verified, which re-checked R1-01 and R1-02. The round 1 review covered P1-01 to P3-03.
   - No `.gitignore`, `.gitattributes`, editor config or CI config was edited this round.
-  - The branch tree is the same one that the round 2 and round 3 reviews verified. The round 2 review re-checked R1-01 and R1-02. The round 1 review covered P1-01 to P3-03.
 - **`kukulu_verify`:** green.
   - All 19 constraints pass, with no fixture failures and no hits.
   - These all pass: npm ci, typecheck, the unit tests (16 of 16), the package.json shape check, `bash -n`, the script-header check and cfn-lint.
 - **PR checks** (`prChecks` from `kukulu_status`): state `pass`, no failing checks.
 - **Mutation sampling:** I ran none this round, for two reasons.
-  - Round 3 queued no fix tasks, so `git diff --name-only 5f09618..HEAD` lists no source files to mutate.
-  - This review's round (4) is past `review.mutationFixRounds` (2), so a survivor could only go in Notes anyway.
-- **The P3-01 re-block:** the implementer followed the round 3 unblock instructions.
+  - Round 4 queued no fix tasks, so `git diff --name-only eda87ca..HEAD` lists no source files to mutate.
+  - This review's round (5) is past `review.mutationFixRounds` (2), so a survivor could only go in Notes anyway.
+- **The P3-01 re-block:** the implementer followed the round 4 unblock instructions.
   - It ran the preflight, tried `make deploy` once, and re-blocked as soon as the classifier denied it. It did not retry or work around the denial.
   - No AWS call ran and nothing was created, so no destroy was needed.
 - **Clean-room mode:** off (`cleanroom` is null in `kukulu_status`), so there are no denials to audit.
@@ -31,10 +30,10 @@ None in categories 1-8.
 ## Blocked tasks
 
 - **P3-01 (sandbox run: deploy, smoke, destroy): the blocker is real, and no fix task can clear it.**
-  - The auto-mode permission classifier has now denied `make deploy` three times: in round 0, round 2 and round 3. Each time the result was the same, and the branch did not change in between.
+  - The auto-mode permission classifier has now denied `make deploy` four times: in rounds 0, 2, 3 and 4. Each time the result was the same, and the branch did not change in between.
   - I am unblocking it again only because `kukulu_review_submit` refuses CHANGES REQUESTED without a task or an unblock. The skill forbids APPROVED while a task is blocked, and SPEC section 1 says the repo is not done until deploy, smoke and destroy pass.
-  - I will not queue a task that turns the live run into a manual check, or one that adds a permission rule. The first would change what "done" means for a SPEC requirement. The second would mean the agent works around its own denial.
-  - I logged the loop as pipeline feedback again (`f71078b`). The controller already marked round 3 `nonConverging`.
+  - I will not queue a task that turns the live run into a manual check, or one that adds a permission rule. The first would change what "done" means for a SPEC requirement. The second would mean the agent works around its own denial. I also kept the unblock instructions unchanged: one attempt with the same invocation, re-block on denial, always destroy.
+  - I logged the loop as pipeline feedback again (`9c95348`). The controller already marked rounds 3 and 4 `nonConverging`.
 - **What unblocks it is a human operator.** Do one of these:
   - (a) Add a Bash permission rule that allows `make deploy`, `make smoke` and `make destroy` for this repo. Then let the flight continue.
   - (b) Run P3-01 yourself in the sandbox account with `EXPECTED_ACCOUNT_ID` set. Run each step on its own, and always run destroy:
@@ -51,15 +50,15 @@ None in categories 1-8.
 
 - **Round 1 choices:** P1-01, P1-03, P2-03, P2-05, the phase-end empty commits and the P3-02 README status note. I assessed these in round 1 and found them consistent with SPEC. They are unchanged.
 - **R1-01 and R1-02:** assessed in round 2 and found consistent with SPEC. They are unchanged.
-- **Round 2 and round 3 HANDOFF entries:** P3-01 was re-blocked with no workaround and no code changes. This is consistent with SPEC Phase 3 and with the unblock instructions.
+- **Round 2, 3 and 4 HANDOFF entries:** P3-01 was re-blocked with no workaround and no code changes. This is consistent with SPEC Phase 3 and with the unblock instructions.
 
 ## Spec issues
 
-These are carried forward from round 3, and none is resolved yet.
+These are carried forward from round 4, and none is resolved yet.
 
 - **SPEC Phase 3 step 1 assumes the agent can run an IaC apply, but the agent's permission policy denies it every time.**
   - SPEC section 8 Phase 3 (and PLAN P3-01) has the implementer run `make deploy/smoke/destroy`.
-  - Under auto mode, the classifier has denied `make deploy` on all three attempts, so the flight cannot finish as specified.
+  - Under auto mode, the classifier has denied `make deploy` on all four attempts, so the flight cannot finish as specified.
   - Change one of two things:
     - (a) SPEC and PLAN: make the live run an operator-run manual check. The agent then only records the results the operator hands it: the Decisions, the notes section, and removing the README note.
     - (b) The flight setup: launch it with a permission rule that allows those three `make` targets.
@@ -94,6 +93,7 @@ These are carried forward from round 3, and none is resolved yet.
 
 ## Notes
 
+- **Stale count in `docs/HANDOFF.md:5`:** the header says "13 unit tests", but the suite now has 16 (R1-01 added three). This is stale text, not a finding.
 - **Advisory survivor in `scripts/deploy.sh:159`** (found in round 2). Reverting `[ -z "$image_version" ] || break` to `break` passes every configured verify command.
   - It is not a fix task, because SPEC section 2 forbids shell test tooling.
   - The reviewer's scratch stub run in round 2 showed that the R1-02 fix works.
