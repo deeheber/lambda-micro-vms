@@ -1,86 +1,86 @@
 # Review
-Round: 1
+Round: 2
 
 **Verdict: CHANGES REQUESTED**
 
-Reviewed: `build/2026-11-01` against base `18029d32e177`, every task commit P1-01 to P3-03, plus `docs/SPEC.md` v0.2 and `docs/PLAN.md`.
+The only thing blocking approval is P3-01, the live sandbox run. It is still blocked by the permission system, and the agent loop can't clear that block. Categories 1-3 are clean across the branch. This round queues no code fix tasks. I unblocked P3-01 only because the submit tool requires a task or an unblock (see Blocked tasks).
+
+Reviewed: `build/2026-11-01` against base `18029d32e177`. This round covers the round 1 fixes (`821d720..HEAD`: R1-01 `2466012` and R1-02 `6399524`) against `docs/SPEC.md`, `docs/PLAN.md` (Review fixes, round 1) and CLAUDE.md. Round 1's review of P1-01 to P3-03 still stands, and no code in those tasks has changed since.
 
 What I checked myself:
-- `kukulu_verify`: green. All 19 constraints pass, with no fixture failures and no hits. npm ci, typecheck, 13 unit tests, the package.json shape check, `bash -n`, the script-header check and cfn-lint all pass.
-- PR checks: `pass`.
-- I read every script for the ordering rules that can't be grepped:
-  - `assert_sandbox` comes before the first `aws` call in deploy, run, call, microvm, smoke and destroy.
-  - Both servers bind `0.0.0.0`.
-  - `instanceId` is `null` at load and set only in the run handler.
-  - Both roles trust `lambda.amazonaws.com` for `sts:AssumeRole` and `sts:TagSession` with the `aws:SourceAccount` condition.
-  - smoke's `EXIT` trap is set.
-  - destroy runs principle 10's four steps in order.
-- I checked CLI output field names offline with `aws lambda-microvms <cmd> help`. These all match what the scripts read: `items[].microvmId/state`, `latestActiveImageVersion`, `state`/`status`/`stateReason` on image versions, and the `authToken` map.
+- **`kukulu_verify`:** green.
+  - All 19 constraints pass, with no fixture failures and no hits.
+  - npm ci, typecheck, unit tests (16, up from 13), the package.json shape check, `bash -n`, the script-header check and cfn-lint all pass.
+- **PR checks** (`prChecks` from `kukulu_status`): `pass`, with no failing checks.
+- **Files changed since `lastReviewCommit` (821d720):**
+  - `app/test/hooks.test.ts` and `scripts/deploy.sh`;
+  - plus pipeline files (`.kukulu/state.json`, `docs/HANDOFF.md`, `docs/PROGRESS.md`).
+  - No `.gitignore`, `.gitattributes`, editor config or CI config was edited.
+- **R1-01:**
+  - The three tests named in the plan exist and call `handleHook` directly on `createState()`.
+  - They import only `node:*` and relative `.ts` files, and `app/src/hooks.ts` is unchanged.
+  - The implementer applied the three mutations by hand because it couldn't use `kukulu_mutate`. I re-ran all three with `kukulu_mutate` (see the table): each was killed by the test written for it, and every kill was confirmed.
+- **R1-02:**
+  - `scripts/deploy.sh:157-164`: the first wait loop now breaks only when the state is CREATED/UPDATED and `latestActiveImageVersion` is non-empty.
+  - It logs once otherwise, and keeps the same `deadline`, `POLL_INTERVAL_SECONDS` and `*_FAILED` handling.
+  - No literal tunables, line 2 is unchanged, and `assert_sandbox` still comes before the first `aws` call.
+  - I didn't trust the log, so I re-ran the offline aws-stub test from R1-02's acceptance criteria myself. It ran in a scratch copy with a stub `aws` on PATH, so no real AWS call was made.
+    - Fixed `deploy.sh`: exit 0, `"imageVersion": "1.0"`, with the one-time "no active version yet" line.
+    - Pre-fix `deploy.sh` (`6399524^`): exit 1, after the stub refused the empty `--image-version`.
+  - The packaging code is untouched, so the `--package-only` sha is unaffected.
 
-Mutation sample (targeted `unit` runner; cfn-lint for infra):
+Mutation sample (targeted `unit` runner for hooks.ts; full verify set for deploy.sh):
 
 | File | Mutation | Result |
 |---|---|---|
-| app/src/hooks.ts | ready: drop the `method === "POST"` check | **survived** |
-| app/src/hooks.ts | ready body `{ ready: s.appListening }` to `{ ready: true }` | **survived** |
-| app/src/hooks.ts | run body `{ ok: true }` to `{ ok: false }` | **survived** |
-| app/src/hooks.ts | ready status always 200 | killed (confirmed) |
-| app/src/hooks.ts | `instanceId = randomUUID()` to a constant | killed (confirmed) |
-| app/src/hooks.ts | `typeof id === "string"` to `id !== undefined` | killed (confirmed) |
-| app/src/app.ts | delete `s.requestCount += 1` | killed (confirmed) |
-| app/src/app.ts | drop the `method === "GET"` check | killed (confirmed) |
-| app/src/state.ts | `instanceId: null` to `"baked"` | killed (confirmed) |
-| infra/image.yaml | delete `AdditionalOsCapabilities: []` | killed (cfn-lint E3003) |
+| app/src/hooks.ts | ready: drop `method === "POST" &&` | killed (confirmed): `a non-POST request to ready returns 404 and logs nothing` |
+| app/src/hooks.ts | `body: { ready: s.appListening }` to `{ ready: true }` | killed (confirmed): `ready returns body ready false at 503 and ready true at 200` |
+| app/src/hooks.ts | `body: { ok: true }` to `{ ok: false }` | killed (confirmed): `run returns body ok true` |
+| scripts/deploy.sh | `[ -z "$image_version" ] \|\| break` to `break` | survived (advisory, see Notes) |
 
 ## Findings
 
-### 1. Category 3 (tests): hooks.ts mechanics no test covers. Fix task R1-01 (source: mutation)
-
-- `app/src/hooks.ts:33`: the `ready` route ignores the HTTP method under test. Removing `method === "POST" &&` leaves every test green. SPEC section 6 defines `POST …/ready`, and PLAN Decisions say a non-POST to a hook path is 404 with no log. `app/test/hooks.test.ts:48` checks this only for `GET run`.
-  - What breaks: a `GET` to `ready` could answer 200 and write a hook log line, and nothing would notice.
-- `app/src/hooks.ts:37`: the `ready` reply body (`{ ready: false }` at 503, `{ ready: true }` at 200, per PLAN P1-03) is never asserted.
-- `app/src/hooks.ts:57`: the `run` reply body `{ ok: true }` is never asserted.
-- Minimal fix: add tests to `app/test/hooks.test.ts` only. No change to `hooks.ts`.
-
-### 2. Category 5 (spec drift): deploy.sh stops waiting before an active image version exists. Fix task R1-02 (source: review)
-
-- `scripts/deploy.sh:146-178`: the first wait loop breaks as soon as `state` is `CREATED` or `UPDATED`, whether or not `latestActiveImageVersion` is set (line 149 maps a missing value to `""`). The second loop then calls `get-microvm-image-version --image-version ""`.
-  - SPEC section 4 says deploy.sh waits for CREATED/UPDATED, *then* for its LatestActiveImageVersion to be SUCCESSFUL and ACTIVE.
-  - `docs/reference/microvms-notes.md` says image state, version state and version activation are independent. So CREATED with no active version yet is a real possibility. It is exactly what Open question 2 asks.
-- What would break: the first live `make deploy` could exit non-zero with a CLI parameter-validation error while the build is still in progress, instead of waiting. P3-01 would then block on a script bug rather than a service answer.
-- Minimal fix: in the first loop, `break` only when the state is CREATED/UPDATED **and** `image_version` is non-empty. Keep polling within the same `deadline`, keep the `_FAILED` handling, and `log` when the image is created but has no active version yet. This should land before a human runs P3-01.
+None in categories 1-8 for this round's changes.
 
 ## Blocked tasks
 
-- **P3-01 (sandbox run: deploy, smoke, destroy): the blocker is real. I did not unblock it.**
-  - The auto-mode permission classifier denied `make deploy` ("Protected-Scope IaC Apply"). No resource was created.
-  - No fix task, plan change or spec change can clear it. Unblocking would only repeat the denial. It would also run before R1-02, because fix tasks are appended after it.
-  - What unblocks it is a human operator. Either:
-    - (a) grant the Bash permission for the three `make` targets and re-queue P3-01; or
-    - (b) run it yourself in the sandbox account with `EXPECTED_ACCOUNT_ID` set, after R1-02 is merged into the branch. Run each step on its own and always destroy:
-      - `bash -c 'set -o pipefail; mkdir -p .build; make deploy 2>&1 | tee .build/deploy.log'`
-      - then the same for `smoke`
-      - save CloudWatch before destroying: `bash -c 'source scripts/lib.sh; assert_sandbox; aws logs tail "/aws/lambda-microvms/$IMAGE_NAME" --since 3h --format short' > .build/cloudwatch.log 2>&1`
-      - then the same for `destroy`
-    - After the run:
-      - record the answers to Open questions 2-5 (plus base image version and build time) under `## Answers from the first sandbox run` in `docs/reference/microvms-notes.md`, tagged `[tested <date>]`;
-      - drop the README status note.
-- **APPROVED can't be reached until that happens, however many fix rounds pass**, because approval requires no blocked tasks.
+- **P3-01 (sandbox run: deploy, smoke, destroy): the blocker is real. I unblocked it anyway, because the submit tool gave me no other option.**
+  - The auto-mode permission classifier denied `make deploy` ("Protected-Scope IaC Apply"), and nothing about that has changed.
+  - `kukulu_review_submit` refuses CHANGES REQUESTED unless the submission has a fix task or an unblock, and APPROVED is not allowed while a task is blocked. With no code findings, unblocking P3-01 was the only submission the tool accepts. I logged this as pipeline feedback.
+  - Round 1 had a second reason not to unblock: R1-02 would run after it. That reason no longer applies, because R1-02 has landed and I've verified it offline.
+  - The implementer should run the preflight and then `make deploy` once. If permission is denied again, it should re-block straight away with the same reason and make no further attempts.
+- **What unblocks it: a human operator.** Either:
+  - (a) allow the Bash permission for the three `make` targets, then re-queue P3-01; or
+  - (b) run it yourself in the sandbox account with `EXPECTED_ACCOUNT_ID` set. Run each step on its own and always destroy:
+    1. `bash -c 'set -o pipefail; mkdir -p .build; make deploy 2>&1 | tee .build/deploy.log'`
+    2. The same for `smoke`.
+    3. Save the CloudWatch logs before destroying: `bash -c 'source scripts/lib.sh; assert_sandbox; aws logs tail "/aws/lambda-microvms/$IMAGE_NAME" --since 3h --format short' > .build/cloudwatch.log 2>&1`
+    4. The same for `destroy`.
+  - After the run, record the answers to Open questions 2-5 (plus the base image version and the build time) under `## Answers from the first sandbox run` in `docs/reference/microvms-notes.md`, tagged `[tested <date>]`. Then remove the README status note.
+- **No round of fix tasks can reach APPROVED while P3-01 is blocked.**
 
 ## Interpretation choices (HANDOFF.md)
 
-- P1-01, `AWS_PARTITION` exported only by `assert_sandbox`: consistent. Every caller of `managed_connector_arn`/`base_image_arn` (deploy.sh, run.sh) calls `assert_sandbox` first.
-- P1-03, `ready` logs on 503 as well as 200; non-POST is 404: consistent with "every hook request writes one stdout line". The non-POST-on-ready part is untested (finding 1).
-- P2-03, zip stamp built with `tr`; zip also holds `package.json`, `package-lock.json`, `tsconfig.json`: consistent with PLAN P2-03. The workaround is needed because the constraint and the plan disagree (see Spec issues).
-- P2-05, `call.sh` checks the path and file before `assert_sandbox`: consistent. No `aws` call comes before it.
-- P1-06, P2-09, P3-03, empty phase-end commits: fine.
-- P3-02, README status note and no measurements: correct while P3-01 is blocked. The note must be removed after the live run.
+- **Round 1 choices (P1-01, P1-03, P2-03, P2-05, phase-end empty commits, P3-02 README status note):** I assessed these in round 1 and found them consistent with SPEC; they are unchanged. The non-POST-on-ready behaviour from P1-03 is now tested (R1-01).
+- **R1-01, mutations run by hand:** resolved. `kukulu_mutate` reproduces all three kills (table above).
+- **R1-02, logs once when there is no active version yet and reuses the same deadline:** consistent with SPEC section 4 and with the R1-02 design constraints.
+- **R1-02, update-path stale-version question left for the live run:** consistent, since R1-02 put it out of scope. It remains under Spec issues below.
 
 ## Spec issues
 
-- **PLAN P2-03 and the `no-account-id` constraint disagree.** The plan prescribes `touch -t 198001010000` literally, which matches `\b[0-9]{12}\b`. The implementer built the stamp with `tr` (`scripts/deploy.sh:55`). That is correct behavior, but the rule flags any 12-digit run, including timestamps. Either the plan should prescribe a form the rule allows, or the rule should exempt it.
-- **Scripts have no offline test net beyond `bash -n` and the constraints.** SPEC section 2 forbids tooling beyond `tsc` and `node --test`, so script logic can't be mutation-tested offline. A mutation in any `scripts/*.sh` survives by construction. The live P3-01 run is the only behavioral test of the scripts, which makes the human run above more important.
-- **Open question 2, update path.** If CloudFormation returns while the image still reads `UPDATED` from the previous deploy and `latestActiveImageVersion` is still the old version, both waits pass on the old version and `imageVersion` in deploy.sh's JSON is stale. R1-02 doesn't cover this. P3-01's operator should check whether the image passes through `UPDATING` on a re-deploy with changed source.
+Carried forward from round 1; none are resolved yet.
+
+- **PLAN P2-03 and the `no-account-id` constraint disagree.**
+  - The plan prescribes `touch -t 198001010000` literally, and that matches `\b[0-9]{12}\b`.
+  - The implementer built the stamp with `tr` (`scripts/deploy.sh:55`). That works, but the rule flags any 12-digit run, timestamps included.
+  - Either the plan should prescribe a form the rule allows, or the rule should exempt it.
+- **Scripts have no offline test net beyond `bash -n` and the constraints.**
+  - SPEC section 2 forbids tooling beyond `tsc` and `node --test`, so any mutation in `scripts/*.sh` survives by construction. This round's deploy.sh survivor shows it again.
+  - Until the live P3-01 run, the only behavioral check on R1-02 is the reviewer's uncommitted stub run.
+  - If you want the scripts covered, change SPEC section 2 to allow a committed aws-stub harness.
+- **Open question 2, update path.**
+  - Suppose CloudFormation returns while the image still reads `UPDATED` from the previous deploy, and `latestActiveImageVersion` still holds the old version. Both waits then pass on the old version, and `imageVersion` in deploy.sh's JSON is stale.
+  - R1-02 doesn't cover this. Whoever runs P3-01 should check whether the image passes through `UPDATING` when you re-deploy with changed source.
 
 ## Manual checks still owed (from HANDOFF.md)
 
@@ -89,19 +89,24 @@ Mutation sample (targeted `unit` runner; cfn-lint for infra):
   - `curl --retry 10 --retry-connrefused -XPOST http://127.0.0.1:9000/aws/lambda-microvms/runtime/v1/run -d '{"microvmId":"local"}'`
   - `curl http://127.0.0.1:8080/`
   - `docker stop mvm-hello-verify`
-- Phase 2: review `BuildRole` and `ExecutionRole` in `infra/bootstrap.yaml` against principle 9. The reviewer read them and found them compliant; the human check is still owed.
+- Phase 2: review `BuildRole` and `ExecutionRole` in `infra/bootstrap.yaml` against principle 9. The reviewer read them in round 1 and found them compliant, but the human check is still owed.
 - Phase 3, with sandbox credentials:
-  - run `make deploy`, `make smoke`, `make destroy`, each teed to `.build/<target>.log`;
-  - save `aws logs tail` before destroy;
+  - run `make deploy`, `make smoke` and `make destroy`, each teed to `.build/<target>.log`;
+  - save the `aws logs tail` output before destroy;
   - confirm the `ready` and `run` lines;
   - record Open questions 2-5 in `docs/reference/microvms-notes.md`;
-  - drop the README status note;
+  - remove the README status note;
   - read README.md end to end.
+- R1-02: the update-path stale-version check (Open question 2), during the live run.
 
 ## Notes
 
-- `.gitignore` gained `.kukulu/implement.lock` in `ee78bd0 chore: start implementation run`. That commit is the pipeline's own, not an implementer edit, so it is not a boundary finding.
-- `scripts/smoke.sh:68`: if `microvm.sh status` fails inside the SUSPENDED poll, `set -e` aborts without printing the `{"ok":false,...}` line. The trap still terminates and the exit is non-zero. The implementer flagged this.
-- `scripts/deploy.sh:70` uses `jq` in the `--package-only` path before any `require_cmd jq`. `require_cmd aws jq zip` (line 76) also runs after `assert_sandbox`, which itself needs `aws` and `jq`. Cosmetic: a missing tool gives a shell error rather than the friendly message.
-- `scripts/deploy.sh:55`: `fixed_stamp` is a global set inside `package_app`. Harmless.
-- `app/src/hooks.ts:46`: `!Array.isArray(parsed)` is redundant, since a JSON array has no `microvmId` property. Removing it is an equivalent mutant, so it was not counted as a survivor.
+- **Advisory survivor in `scripts/deploy.sh:159`.** Reverting `[ -z "$image_version" ] || break` to `break` passes every configured verify command.
+  - It is not a fix task. R1-02 puts committing shell test tooling out of scope, and SPEC section 2 forbids it, so no task could kill this mutant.
+  - The reviewer's scratch stub run (above) shows the fix works.
+- **Duplicate log line in `scripts/deploy.sh:160-166`.** On the first CREATED/UPDATED poll with no version yet, the loop logs "image state CREATED but no active version yet; waiting" and then the generic "image state CREATED; waiting" on the same pass. It's harmless and cosmetic.
+- **Carried from round 1.** These still apply and are unchanged:
+  - `scripts/smoke.sh:68`: a failing `microvm.sh status` inside the SUSPENDED poll aborts without the `{"ok":false,...}` line.
+  - `scripts/deploy.sh:70`: uses `jq` before `require_cmd`.
+  - `scripts/deploy.sh:55`: `fixed_stamp` is a global.
+  - `app/src/hooks.ts:45`: the redundant `!Array.isArray(parsed)`.
