@@ -20,7 +20,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-07 smoke.sh end-to-end lifecycle check
 - [x] P2-08 destroy.sh ordered teardown
 - [x] P2-09 Phase 2 push and IAM review
-- [ ] P3-01 Sandbox run: deploy, smoke, destroy
+- [x] P3-01 Sandbox run: deploy, smoke, destroy
 - [x] P3-02 README walkthrough
 - [x] P3-03 Phase 3 push and final manual checks
 - [x] R1-01 hooks.test.ts: cover ready method check and hook reply bodies
@@ -147,3 +147,14 @@ BLOCKED: Tried: preflight (EXPECTED_ACCOUNT_ID set) passed, then `make deploy` i
 ### P3-01 — unblocked (round 5)
 
 Round 5: fourth consecutive identical re-block. Outside docs/ and .kukulu/, the branch has not changed since 2ae6531, and categories 1-3 are clean. The only blocker is the permission classifier denying `make deploy`, which only a human operator can clear: allow a Bash permission rule for `make deploy/smoke/destroy`, or run P3-01 by hand. Unblocked only because the submit tool accepts no other CHANGES REQUESTED submission. Try `make deploy` once, per the sandbox-run protocol. If it is denied, re-block immediately with the same reason: no retry, no workaround. Always run `make destroy` if anything was created.
+
+### P3-01 — 8be34e2
+
+Tests: make deploy exit 0; make smoke exit 0 with ok:true (first try); make destroy exit 0 (terminated [], both stacks deleted); cloudwatch.log has ready x2 and run x1. make check and kukulu_verify green.
+Measurements: baseImageVersion 3, buildSeconds 157, imageStateAfterCfn CREATED, resumePath auto.
+smoke summary: {"ok":true,"requestCountBefore":1,"requestCountAfter":2,"resumePath":"auto"} (ids omitted).
+Run hook timing: run.sh launch log 20:53:10Z; run hook line ts 20:53:12.399Z (~2 s).
+Hook lines verbatim: {"hook":"ready","status":200,"ts":"2026-11-01T20:52:19.813Z"} ; {"hook":"ready","status":200,"ts":"2026-11-01T20:52:19.954Z"} ; {"hook":"run","status":200,"ts":"2026-11-01T20:53:12.399Z"}
+Decisions: (2) cloudformation deploy returned after image reached CREATED. (3) dnf install had network at build time (nodejs24 24.22.1). (4) default ingress worked; config.env unchanged. (5) auto-resume triggered after explicit suspend (resumePath auto).
+Answers appended to docs/reference/microvms-notes.md.
+Manual check: NOT VERIFIED (human) for phase-end P3-03 only.
