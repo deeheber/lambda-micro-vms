@@ -60,3 +60,28 @@ test("ready and run each return one JSON log line with hook, status and ts", () 
     '{"hook":"run","status":200,"ts":"2026-11-01T12:00:00.000Z"}',
   );
 });
+
+test("a non-POST request to ready returns 404 and logs nothing", () => {
+  const s = createState();
+  s.appListening = true;
+  const r = handleHook(s, "GET", READY, "");
+  assert.equal(r.status, 404);
+  assert.deepEqual(r.body, { error: "not found" });
+  assert.equal(r.log, null);
+});
+
+test("ready returns body ready false at 503 and ready true at 200", () => {
+  const s = createState();
+  const before = handleHook(s, "POST", READY, "");
+  assert.equal(before.status, 503);
+  assert.deepEqual(before.body, { ready: false });
+  s.appListening = true;
+  const after = handleHook(s, "POST", READY, "");
+  assert.equal(after.status, 200);
+  assert.deepEqual(after.body, { ready: true });
+});
+
+test("run returns body ok true", () => {
+  const s = createState();
+  assert.deepEqual(handleHook(s, "POST", RUN, "{}").body, { ok: true });
+});
