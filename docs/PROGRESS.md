@@ -18,7 +18,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-05 call.sh mints a token and calls the MicroVM
 - [x] P2-06 microvm.sh status, suspend, resume, terminate
 - [x] P2-07 smoke.sh end-to-end lifecycle check
-- [ ] P2-08 destroy.sh ordered teardown
+- [x] P2-08 destroy.sh ordered teardown
 - [ ] P2-09 Phase 2 push and IAM review
 - [ ] P3-01 Sandbox run: deploy, smoke, destroy
 - [ ] P3-02 README walkthrough
@@ -87,3 +87,7 @@ Offline checks passed (terminate no-file 0, status no-file 1, bogus 1). Not-foun
 ### P2-07 — eff74c6
 
 Offline checks only (bash -n, sandbox guard exit 1). EXIT trap terminates via microvm.sh. Prints {resumePath} line then final summary line; failures print {ok:false,step,reason}. A failing `microvm.sh status` inside the SUSPENDED poll aborts via set -e (trap still terminates) without the ok:false line.
+
+### P2-08 — 6c3fcaf
+
+Offline checks only (bash -n, sandbox guard exit 1). Uses list-microvms .items[].microvmId/.state. imageStack/bootstrapStack report "deleted" when describe-stacks found the stack before deletion.
