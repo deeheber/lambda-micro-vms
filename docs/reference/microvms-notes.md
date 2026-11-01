@@ -1,6 +1,6 @@
 # Lambda MicroVMs: verified notes
 
-These notes were compiled on 2026-10-31 from AWS documentation and checks run against the live APIs and local tools. Each item is tagged with how it was verified:
+These notes were compiled on 2026-10-31 (updated 2026-11-01) from AWS documentation and checks run against the live APIs and local tools. Each item is tagged with how it was verified:
 
 - **[tested]**: run locally or against AWS.
 - **[schema]**: from `cloudformation describe-type`.
@@ -21,8 +21,10 @@ These notes were compiled on 2026-10-31 from AWS documentation and checks run ag
   - The **build role** (`BuildRoleArn` on the image) is used during the image build: S3 read and CloudWatch Logs writes.
   - The **execution role** (`--execution-role-arn` on `run-microvm`) is assumed at runtime and exposed to the guest through IMDSv2.
   - Without an execution role, app stdout is **not** shipped to CloudWatch. **[docs]**
-- **Base OS.** The only managed base image is `arn:aws:lambda:<region>:aws:microvm-image:al2023-1` (Amazon Linux 2023), and there is nothing newer. In us-west-2, `list-managed-microvm-images` returns only `imageArn`, `createdAt`, and `updatedAt`; **there is no version string**. **[tested]**
-- **You can't read AWS-owned base images.** `get-microvm-image` and `list-microvm-image-versions` on `…:aws:microvm-image:al2023-1` return `AccessDenied`, even for an admin user. Calls on images you own work. **[tested]**
+- **Base OS.** The only managed base image is `arn:aws:lambda:<region>:aws:microvm-image:al2023-1` (Amazon Linux 2023), and there is nothing newer. `list-managed-microvm-images` returns only `imageArn`, `createdAt`, and `updatedAt`, with no version string. **[tested]**
+- **Base image versions are listed by `list-managed-microvm-image-versions`.** `aws lambda-microvms list-managed-microvm-image-versions --image-identifier arn:aws:lambda:us-west-2:aws:microvm-image:al2023-1` returns `items[]` of `{imageArn, imageVersion, status, createdAt, updatedAt}`. In us-west-2 it returned `imageVersion` `"0"`–`"3"`, all `AVAILABLE`. Versions are strings holding integers, so compare them numerically. **[tested 2026-11-01]**
+- **Base image version lifecycle.** If you omit a version, the latest one is used (the API allows that; the CFN schema doesn't). Versions go `AVAILABLE` → `DEPRECATED` (60 days, can still build) → `EXPIRING` (30 days, can't build new images) → `EXPIRED` (can't build or run). `RECALLED` is immediate and rare. Rebuild onto a newer version to patch. **[docs]**
+- **You can't read AWS-owned base images through the regular image APIs.** `get-microvm-image` and `list-microvm-image-versions` on `…:aws:microvm-image:al2023-1` return `AccessDenied`, even for an admin user. Use the `*-managed-*` calls above instead. Calls on images you own work. **[tested]**
 - **Architecture.** `CpuConfigurations` allows only `ARM_64`. Build and test containers locally with `--platform linux/arm64`. **[schema]**
 
 ## `AWS::Lambda::MicrovmImage` (CloudFormation)
@@ -34,7 +36,9 @@ These notes were compiled on 2026-10-31 from AWS documentation and checks run ag
   - `Name` is create-only, so changing it replaces the image.
 - **`Ref`** returns the image ARN.
 - **`GetAtt`:** `ImageArn`, `State`, `LatestActiveImageVersion`, `LatestFailedImageVersion`, `CreatedAt`, `UpdatedAt`.
-- **States:** `CREATING`, `CREATED`, `CREATE_FAILED`, `UPDATING`, `UPDATED`, `UPDATE_FAILED`, `DELETING`, `DELETE_FAILED`, `DELETED`.
+- **States:** `CREATING`, `CREATED`, `CREATE_FAILED`, `UPDATING`, `UPDATED`, `UPDATE_FAILED`, `DELETING`, `DELETE_FAILED`, `DELETED`. These match `get-microvm-image help`. The developer guide's prose says `CREATION_FAILED`/`DELETION_FAILED`; the API doesn't use those spellings. **[tested]**
+  - After an update, the image settles in **`UPDATED`**, not `CREATED`. Anything that waits for the image must accept both. **[docs]**
+  - Image state, version state (`PENDING`, `IN_PROGRESS`, `SUCCESSFUL`, `FAILED`) and version activation (`ACTIVE`/`INACTIVE`) are independent. Running a MicroVM needs image `CREATED`/`UPDATED`, version `SUCCESSFUL`, and `ACTIVE`. **[docs]**
 - **Updates.** Changing any property except `Name` is "No interruption" and creates a **new image version**. The update handler's permissions include `lambda:DeleteMicrovmImageVersion`, so CloudFormation may clean up old versions on update.
 - **Permissions CloudFormation needs (the caller's own):**
   - Create: `lambda:CreateMicrovmImage`, `lambda:GetMicrovmImage`, `lambda:PassNetworkConnector`, `iam:PassRole`, `lambda:TagResource`.
@@ -134,6 +138,7 @@ aws lambda-microvms get-microvm-image --image-identifier <imageArn>   # image st
 ## Sources
 
 - Developer guide: https://docs.aws.amazon.com/lambda/latest/dg/lambda-microvms-guide.html
+- MicroVM images (base versions, states, build hooks): https://docs.aws.amazon.com/lambda/latest/dg/microvms-images.html
 - Getting started: https://docs.aws.amazon.com/lambda/latest/dg/microvms-getting-started.html
 - Running MicroVMs and hooks: https://docs.aws.amazon.com/lambda/latest/dg/microvms-launching.html
 - Networking and auth: https://docs.aws.amazon.com/lambda/latest/dg/microvms-networking.html
