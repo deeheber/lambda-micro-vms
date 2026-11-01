@@ -222,6 +222,18 @@
       "stage": "implement",
       "round": 5,
       "at": "2026-11-01T20:48:55.973Z"
+    },
+    {
+      "event": "end",
+      "stage": "implement",
+      "round": 5,
+      "at": "2026-11-01T20:56:27.925Z"
+    },
+    {
+      "event": "start",
+      "stage": "review",
+      "round": 5,
+      "at": "2026-11-01T20:56:27.925Z"
     }
   ],
   "cleanroom": {
