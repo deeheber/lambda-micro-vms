@@ -10,9 +10,13 @@
     "signing": "auto",
     "push": true,
     "pr": "draft",
-    "feedback": true
+    "feedback": true,
+    "archive": true,
+    "finalize": "auto",
+    "mergeMethod": "merge",
+    "syncBase": true
   },
-  "signing": null,
+  "signing": "on",
   "rounds": [],
   "timeline": [
     {
@@ -33,5 +37,8 @@
       "round": 0,
       "at": "2026-11-01T20:14:26.376Z"
     }
-  ]
+  ],
+  "cleanroom": {
+    "mode": "general"
+  }
 }
