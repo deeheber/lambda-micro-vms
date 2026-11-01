@@ -4,7 +4,7 @@ A minimal "hello world" for [AWS Lambda MicroVMs](https://docs.aws.amazon.com/la
 It builds a MicroVM image with CloudFormation, runs a MicroVM, calls it over HTTPS, then suspends, resumes and terminates it.
 It's meant for learning the service and as a template to fork. The code and scripts are heavily commented with the MicroVM concept each piece shows.
 
-> Status: the code has been checked offline only (`make check`). The live sandbox run (`make deploy`, `make smoke`) has not been recorded yet, so no measurements are quoted here.
+> Status: first live sandbox run recorded 2026-11-01 (`us-west-2`): base image version 3, a 157-second image build, the `run` hook fired about 2 seconds after launch, and the MicroVM resumed by itself after a suspend. Details are in [docs/reference/microvms-notes.md](docs/reference/microvms-notes.md).
 
 ## Prerequisites
 
