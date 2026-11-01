@@ -6,17 +6,11 @@ import { createState } from "../src/state.ts";
 const READY = `${HOOK_PREFIX}ready`;
 const RUN = `${HOOK_PREFIX}run`;
 
-test("ready returns 503 before the app server is listening and 200 after", () => {
-  const s = createState();
-  assert.equal(handleHook(s, "POST", READY, "").status, 503);
-  s.appListening = true;
-  assert.equal(handleHook(s, "POST", READY, "").status, 200);
-});
-
 test("run sets microvmId from the body and assigns an instanceId", () => {
   const s = createState();
   const r = handleHook(s, "POST", RUN, '{"microvmId":"mvm-123"}');
   assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { ok: true });
   assert.equal(s.microvmId, "mvm-123");
   assert.equal(typeof s.instanceId, "string");
 });
@@ -70,7 +64,7 @@ test("a non-POST request to ready returns 404 and logs nothing", () => {
   assert.equal(r.log, null);
 });
 
-test("ready returns body ready false at 503 and ready true at 200", () => {
+test("ready returns 503 with ready false before the app server is listening, and 200 with ready true after", () => {
   const s = createState();
   const before = handleHook(s, "POST", READY, "");
   assert.equal(before.status, 503);
@@ -79,9 +73,4 @@ test("ready returns body ready false at 503 and ready true at 200", () => {
   const after = handleHook(s, "POST", READY, "");
   assert.equal(after.status, 200);
   assert.deepEqual(after.body, { ready: true });
-});
-
-test("run returns body ok true", () => {
-  const s = createState();
-  assert.deepEqual(handleHook(s, "POST", RUN, "{}").body, { ok: true });
 });
