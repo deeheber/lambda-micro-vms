@@ -38,3 +38,11 @@ All keys in `config.env` are at their SPEC defaults; none were tuned because no 
 ## For the reviewer
 
 - Unverified against the real service: CLI response field names were checked only through `aws lambda-microvms <cmd> help`. The most likely live failures are in `deploy.sh` waits (state names), `run.sh` option shapes (connector list args) and `smoke.sh` timing.
+
+## Round 1
+
+Both fix tasks done; counts: 19 done, 1 blocked, 0 open.
+
+- R1-01 (app/test/hooks.test.ts): added tests for the ready POST-only check, ready reply bodies and run reply body. kukulu_mutate was not available to the implementer, so the three specified mutations were applied by hand with sed; each made the suite fail (killed). hooks.ts is unchanged.
+- R1-02 (scripts/deploy.sh): the first wait loop now breaks only when the image state is CREATED/UPDATED and latestActiveImageVersion is non-empty, with a one-time log line otherwise. Checked with an offline aws stub (not committed): fixed script exits 0 with imageVersion 1.0, pre-fix script exits 1.
+- Not verified: the update-path stale-version question (SPEC Open question 2) is left for the live run. Manual check: NOT VERIFIED (human).
