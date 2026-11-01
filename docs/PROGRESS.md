@@ -15,7 +15,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-02 Image stack template
 - [x] P2-03 deploy.sh with deterministic packaging
 - [x] P2-04 run.sh launches one MicroVM
-- [ ] P2-05 call.sh mints a token and calls the MicroVM
+- [x] P2-05 call.sh mints a token and calls the MicroVM
 - [ ] P2-06 microvm.sh status, suspend, resume, terminate
 - [ ] P2-07 smoke.sh end-to-end lifecycle check
 - [ ] P2-08 destroy.sh ordered teardown
@@ -75,3 +75,7 @@ Interpretation: touch stamp built via tr from "1980-01-01 00:00" because 1980010
 ### P2-04 — 02d9f0f
 
 bash -n and sandbox guard verified offline; AWS path not run. Writes .build/microvm.json {microvmId,endpoint} and prints it. Uses ${ingress_args[@]+...} idiom for empty arrays under set -u (bash 3.2 safe).
+
+### P2-05 — 0745e10
+
+Offline checks only (bash -n, missing-file and bad-path exit 1). Interpretation: path and microvm.json checks run before assert_sandbox since no aws call precedes it. Token on stdin via -H @-, var TOKEN.
