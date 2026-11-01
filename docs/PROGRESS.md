@@ -19,7 +19,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P2-06 microvm.sh status, suspend, resume, terminate
 - [x] P2-07 smoke.sh end-to-end lifecycle check
 - [x] P2-08 destroy.sh ordered teardown
-- [ ] P2-09 Phase 2 push and IAM review
+- [x] P2-09 Phase 2 push and IAM review
 - [ ] P3-01 Sandbox run: deploy, smoke, destroy
 - [ ] P3-02 README walkthrough
 - [ ] P3-03 Phase 3 push and final manual checks
@@ -91,3 +91,8 @@ Offline checks only (bash -n, sandbox guard exit 1). EXIT trap terminates via mi
 ### P2-08 — 6c3fcaf
 
 Offline checks only (bash -n, sandbox guard exit 1). Uses list-microvms .items[].microvmId/.state. imageStack/bootstrapStack report "deleted" when describe-stacks found the stack before deletion.
+
+### P2-09 — 240cae8
+
+make check passed. Push: done.
+Manual check: NOT VERIFIED (human). Review BuildRole and ExecutionRole in infra/bootstrap.yaml against SPEC principle 9: trust lambda.amazonaws.com for sts:AssumeRole and sts:TagSession with aws:SourceAccount = AWS::AccountId; no Resource '*'; no Action with '*'.
