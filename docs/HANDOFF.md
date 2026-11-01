@@ -62,3 +62,9 @@ Counts: 19 done, 1 blocked (P3-01), 0 open. Head fbe6a92.
 - P3-01 was the only open task and is BLOCKED again: preflight passed, but the permission classifier denied `make deploy` ("Production Deploy") before any AWS call. Nothing was created, so no destroy was needed. I did not work around the denial.
 - Open questions 2-5 stay unanswered. An operator must allow `make deploy/smoke/destroy` for the sandbox (a Bash permission rule) or run the P3-01 sequence by hand.
 - No code, config.env or notes changes were made this round.
+
+## Round 4
+- Only task: P3-01 (sandbox deploy, smoke, destroy). BLOCKED: preflight passed, but the permission classifier denied `make deploy` as "Production Deploy". No AWS call was made and nothing was created, so no destroy was needed. Nothing was worked around.
+- Open questions 2-5 stay unanswered and `docs/reference/microvms-notes.md` is unchanged.
+- To unblock: allow `make deploy`, `make smoke` and `make destroy` for the implementer (Bash permission rule), or run P3-01's sequence by hand, then re-queue the task.
+- Counts: 19 done, 1 blocked.
