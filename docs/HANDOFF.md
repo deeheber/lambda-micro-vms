@@ -46,3 +46,11 @@ Both fix tasks done; counts: 19 done, 1 blocked, 0 open.
 - R1-01 (app/test/hooks.test.ts): added tests for the ready POST-only check, ready reply bodies and run reply body. kukulu_mutate was not available to the implementer, so the three specified mutations were applied by hand with sed; each made the suite fail (killed). hooks.ts is unchanged.
 - R1-02 (scripts/deploy.sh): the first wait loop now breaks only when the image state is CREATED/UPDATED and latestActiveImageVersion is non-empty, with a one-time log line otherwise. Checked with an offline aws stub (not committed): fixed script exits 0 with imageVersion 1.0, pre-fix script exits 1.
 - Not verified: the update-path stale-version question (SPEC Open question 2) is left for the live run. Manual check: NOT VERIFIED (human).
+
+## Round 2
+
+Counts: 19 done, 1 blocked (P3-01), 0 open. Head 4ace9ab.
+
+- P3-01 (sandbox deploy, smoke, destroy) is BLOCKED: preflight passed (EXPECTED_ACCOUNT_ID set), but the permission classifier denied `make deploy` as a production deploy before it ran. Nothing was created, so no destroy was needed. I did not work around the denial.
+- Open questions 2-5 stay unanswered. An operator must allow the sandbox deploy (a Bash permission rule for `make deploy/smoke/destroy`) or run P3-01 by hand.
+- No code, config.env or notes changes were made this round.
