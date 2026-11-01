@@ -213,7 +213,7 @@ Paths are under `/aws/lambda-microvms/runtime/v1/`.
     - ingress and egress managed connectors (see Open question 4).
   - Writes `.build/microvm.json` = `{"microvmId","endpoint"}`. Endpoints come back without a scheme; scripts prepend `https://`.
 - **`call.sh [path]`**
-  - Mints a token: `create-microvm-auth-token --allowed-ports '[{"port":APP_PORT}]' --expiration-in-minutes TOKEN_TTL_MINUTES`, reading `authToken."X-aws-proxy-auth"`.
+  - Mints a token: `create-microvm-auth-token --microvm-identifier <microvmId from .build/microvm.json> --allowed-ports '[{"port":APP_PORT}]' --expiration-in-minutes TOKEN_TTL_MINUTES`, reading `authToken."X-aws-proxy-auth"`.
   - Curls with `-fsS --max-time CURL_MAX_TIME_SECONDS`, sending the `X-aws-proxy-auth` and `X-aws-proxy-port: APP_PORT` headers from stdin (`printf 'X-aws-proxy-auth: %s\nX-aws-proxy-port: %s\n' "$TOKEN" "$APP_PORT" | curl -H @- …`) and printing the body. The token's `--allowed-ports` only authorizes the port; `X-aws-proxy-port` is what routes to it when `APP_PORT` isn't 8080.
   - The token is never echoed, written to disk, or placed in a command's arguments (where `ps` would show it).
 - **`smoke.sh`**
@@ -257,7 +257,7 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
   - An unknown path returns 404.
   - A malformed `/run` body is tolerated.
 - Ends with `make check` and the Docker build passing.
-- **Manual check** (default ports from `config.env`; substitute yours if you changed them): `docker run -d --rm --name mvm-hello-verify -p 8080:8080 -p 9000:9000 mvm-hello:verify`, then `curl -XPOST http://127.0.0.1:9000/aws/lambda-microvms/runtime/v1/run -d '{"microvmId":"local"}'` and `curl http://127.0.0.1:8080/`, then `docker stop mvm-hello-verify`.
+- **Manual check** (default ports from `config.env`; substitute yours if you changed them): `docker run -d --rm --name mvm-hello-verify -p 8080:8080 -p 9000:9000 mvm-hello:verify`, then `curl --retry 10 --retry-connrefused -XPOST http://127.0.0.1:9000/aws/lambda-microvms/runtime/v1/run -d '{"microvmId":"local"}'` and `curl http://127.0.0.1:8080/`, then `docker stop mvm-hello-verify`.
 
 ### Phase 2: Infra and packaging
 
