@@ -23,6 +23,8 @@ Started: 2026-11-01T20:14:36.407Z
 - [!] P3-01 Sandbox run: deploy, smoke, destroy
 - [x] P3-02 README walkthrough
 - [x] P3-03 Phase 3 push and final manual checks
+- [ ] R1-01 hooks.test.ts: cover ready method check and hook reply bodies
+- [ ] R1-02 deploy.sh: keep waiting until the image has an active version
 
 ## Log
 
