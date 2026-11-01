@@ -13,7 +13,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P1-06 Phase 1 push and manual container check
 - [x] P2-01 Bootstrap stack template
 - [x] P2-02 Image stack template
-- [ ] P2-03 deploy.sh with deterministic packaging
+- [x] P2-03 deploy.sh with deterministic packaging
 - [ ] P2-04 run.sh launches one MicroVM
 - [ ] P2-05 call.sh mints a token and calls the MicroVM
 - [ ] P2-06 microvm.sh status, suspend, resume, terminate
@@ -66,3 +66,8 @@ cfn-lint clean, make check includes cfn-lint now. Exports: ${StackName}-{Artifac
 ### P2-02 — cb2e518
 
 cfn-lint clean. Params: BootstrapStackName, ImageName, ImageDescription, BaseImageVersion, ArtifactUri, MemoryMiB, HooksPort, ReadyTimeoutInSeconds, RunTimeoutInSeconds (deploy.sh must pass the last six as needed). Outputs ImageArn, LatestActiveImageVersion.
+
+### P2-03 — 8ce1982
+
+Verified offline: --package-only sha identical x3 (incl. touch of src), zip root has Dockerfile, src/, package*.json, tsconfig.json; HOOKS_PORT mismatch exits 1 naming key. AWS path NOT run.
+Interpretation: touch stamp built via tr from "1980-01-01 00:00" because 198001010000 trips the no-account-id constraint. stdout JSON adds buildSeconds via --argjson of arithmetic. Reads ImageArn via stack_output. Zip also contains package.json, package-lock.json, tsconfig.json.
