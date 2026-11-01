@@ -10,7 +10,7 @@ Started: 2026-11-01T20:14:36.407Z
 - [x] P1-03 Hooks server request handler
 - [x] P1-04 Entry point starting both servers
 - [x] P1-05 Dockerfile on the snapshot-safe base image
-- [ ] P1-06 Phase 1 push and manual container check
+- [x] P1-06 Phase 1 push and manual container check
 - [ ] P2-01 Bootstrap stack template
 - [ ] P2-02 Image stack template
 - [ ] P2-03 deploy.sh with deterministic packaging
@@ -52,3 +52,9 @@ No new tests. Local smoke on ports 18080/19000 gave {"ready":true}, {"ok":true},
 ### P1-05 — 1ef1c4b
 
 docker build --platform linux/arm64 passed (nodejs24 24.22.1 via dnf, network works at build time locally); Dockerfile structure check passed.
+
+### P1-06 — 5caa757
+
+make check and docker build passed (docker build ran in P1-05 verify). Push: done (origin build/2026-11-01).
+Manual check: NOT VERIFIED (human). Steps: docker run -d --rm --name mvm-hello-verify -p 8080:8080 -p 9000:9000 mvm-hello:verify; curl --retry 10 --retry-connrefused -XPOST http://127.0.0.1:9000/aws/lambda-microvms/runtime/v1/run -d '{"microvmId":"local"}'; curl http://127.0.0.1:8080/; docker stop mvm-hello-verify.
+Interpretation: empty commit carries the task ID.
