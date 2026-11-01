@@ -18,5 +18,6 @@
     "slug": "hello-world",
     "dir": "docs/flights/hello-world",
     "at": "2026-11-01T21:01:06.749Z"
-  }
+  },
+  "breaking": false
 }
