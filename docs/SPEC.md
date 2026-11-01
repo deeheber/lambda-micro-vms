@@ -8,7 +8,7 @@ The Kūkulu planner reads this file in full and derives the build plan from it. 
 
 A minimal, heavily commented repo that builds a Lambda MicroVM image with CloudFormation, runs one MicroVM, calls it over HTTPS, then suspends, resumes, and terminates it.
 
-It's for a developer learning Lambda MicroVMs, and it is the template they will fork for later experiments. The repo is done when `make deploy && make smoke && make destroy` passes against a sandbox AWS account in `us-west-2`, and the README explains which MicroVM concept each step demonstrates.
+It's for a developer learning Lambda MicroVMs, and it is the template they will fork for later experiments. The repo is done when `make deploy` and `make smoke` pass, followed by a `make destroy` that runs even if either of them failed, against a sandbox AWS account in `us-west-2`, and the README explains which MicroVM concept each step demonstrates.
 
 ## 2. Goals and non-goals
 
@@ -98,7 +98,9 @@ scripts/
                           → wait for image CREATED or UPDATED. Safe to re-run.
   run.sh                  run-microvm; write .build/microvm.json
   call.sh                 mint auth token; curl the given path (default /); print response body
-  microvm.sh              <status|suspend|resume|terminate> for the MicroVM in .build/microvm.json
+  microvm.sh              <status|suspend|resume|terminate> for the MicroVM in .build/microvm.json;
+                          `terminate` exits 0 if the MicroVM is already TERMINATING, TERMINATED or not found,
+                          so the explicit call and smoke.sh's EXIT trap can both run it
   smoke.sh                end-to-end lifecycle check (section 6)
   destroy.sh              ordered teardown (principle 10)
 config.env                committed, non-secret defaults (section 5)
@@ -108,7 +110,7 @@ README.md                 walkthrough (G7)
 
 **Boundaries and shared wiring:**
 
-- `app/` never reads `config.env`. Ports reach the app through Dockerfile `ENV` lines whose values match `config.env` defaults. The hooks port also goes into `image.yaml` as a parameter.
+- `app/` never reads `config.env`. Ports reach the app through Dockerfile `ENV APP_PORT` and `ENV HOOKS_PORT` lines whose values match `config.env`. The hooks port also goes into `image.yaml` as a parameter. Changing a port means editing both files; `deploy.sh` exits 1 before packaging if the Dockerfile `ENV` values differ from `config.env`, so the two can't drift silently.
 - `Makefile`, `config.env`, and `scripts/lib.sh` are shared wiring. The planner keeps tasks that edit them serial.
 - `app/` and `infra/` are independent and can be built in parallel.
 
@@ -212,8 +214,8 @@ Paths are under `/aws/lambda-microvms/runtime/v1/`.
   - Writes `.build/microvm.json` = `{"microvmId","endpoint"}`. Endpoints come back without a scheme; scripts prepend `https://`.
 - **`call.sh [path]`**
   - Mints a token: `create-microvm-auth-token --allowed-ports '[{"port":APP_PORT}]' --expiration-in-minutes TOKEN_TTL_MINUTES`, reading `authToken."X-aws-proxy-auth"`.
-  - Curls with `-fsS --max-time CURL_MAX_TIME_SECONDS`, sending the header `X-aws-proxy-auth: $TOKEN` and printing the body.
-  - The token is never echoed or written to disk.
+  - Curls with `-fsS --max-time CURL_MAX_TIME_SECONDS`, sending the `X-aws-proxy-auth` header from stdin (`printf 'X-aws-proxy-auth: %s\n' "$TOKEN" | curl -H @- …`) and printing the body.
+  - The token is never echoed, written to disk, or placed in a command's arguments (where `ps` would show it).
 - **`smoke.sh`**
   1. `run.sh`
   2. Retry `call.sh /` until it succeeds or `CALL_READY_TIMEOUT_SECONDS` pass. Readiness is checked by connecting, because `get-microvm` state is eventually consistent. Assert `instanceId` and `microvmId` are non-null, and record `instanceId` and `requestCount`.
@@ -255,7 +257,7 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
   - An unknown path returns 404.
   - A malformed `/run` body is tolerated.
 - Ends with `make check` and the Docker build passing.
-- **Manual check:** `docker run --rm -p 8080:8080 -p 9000:9000 mvm-hello:verify`, then `curl -XPOST :9000/aws/lambda-microvms/runtime/v1/run -d '{"microvmId":"local"}'` and `curl :8080/`.
+- **Manual check:** `docker run -d --rm --name mvm-hello-verify -p 8080:8080 -p 9000:9000 mvm-hello:verify`, then `curl -XPOST http://127.0.0.1:9000/aws/lambda-microvms/runtime/v1/run -d '{"microvmId":"local"}'` and `curl http://127.0.0.1:8080/`, then `docker stop mvm-hello-verify`.
 
 ### Phase 2: Infra and packaging
 
@@ -272,7 +274,7 @@ All of these are offline and exit non-zero on failure. None exists until the Pha
    - It resolves Open questions 2–5 and records each answer under `Decisions`.
    - It also writes every resolved open question into `docs/reference/microvms-notes.md`, tagged `[tested <date>]`, so later flights start from the answers instead of the questions.
    - On failure, it runs `make destroy` **first**, then **blocks** with the error and the last 50 lines of the image build log. It does not retry in a loop.
-   - If the build log shows the build role could not be assumed, record that, remove the `aws:SourceAccount` condition from both trust policies as a recorded decision, and run the sequence once more. This is the only allowed retry.
+   - If the build log shows the build role could not be assumed, block the same way. Do **not** loosen the trust policies: principle 9 requires the `aws:SourceAccount` condition, and changing IAM is a human decision. Put the AssumeRole error in the block reason so the operator can decide.
 2. A `README.md` walkthrough covering:
    - prerequisites (an AWS account with admin access; `EXPECTED_ACCOUNT_ID` exported or in `.env`; AWS CLI v2, `jq`, `zip`, Node 24, Docker);
    - each `make` target and the concept it demonstrates;
