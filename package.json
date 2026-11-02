@@ -10,7 +10,7 @@
   "scripts": {
     "typecheck": "npm run typecheck -w app",
     "test": "npm test -w app",
-    "check": "npm run typecheck && npm test && bash -n scripts/*.sh && cfn-lint infra/*.yaml",
+    "check": "npm run typecheck && npm test && for f in scripts/*.sh; do bash -n \"$f\" || exit 1; done && cfn-lint infra/*.yaml",
     "deploy": "bash scripts/deploy.sh",
     "microvm:run": "bash scripts/run.sh",
     "microvm:status": "bash scripts/microvm.sh status",
