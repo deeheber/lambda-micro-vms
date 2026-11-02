@@ -46,7 +46,7 @@ The app itself is two tiny servers (`app/src/`): one on `APP_PORT` returning JSO
 
 ## Content-hashed artifacts
 
-`deploy.sh` zips `app/` deterministically (sorted entries, fixed modes and timestamps) and names the zip after its SHA-256: `s3://<bucket>/artifacts/app-<sha256>.zip`. Unchanged code gives the same key, so CloudFormation sees no change and no new image version is built. Changed code gives a new key, which is a changed template property, which builds a new image version. The `artifacts/` prefix is the only path the build role can read.
+`deploy.sh` zips `app/` deterministically (sorted entries, fixed modes and timestamps) and names the zip after its SHA-256: `s3://<bucket>/artifacts/app-<sha256>.zip`. Unchanged code gives the same key, so CloudFormation sees no change and no new image version is built. Changed code gives a new key, which is a changed template property, which builds a new image version. Any other changed image parameter builds one too, including a newer base image version, which `deploy.sh` picks up when `BASE_IMAGE_VERSION` is empty. The `artifacts/` prefix is the only path the build role can read.
 
 ## Cost model
 
@@ -59,7 +59,7 @@ The defaults are cost-conscious: idle MicroVMs suspend after `IDLE_MAX_SECONDS`,
 
 ## Configuration
 
-Every tunable lives in `config.env`, each with a comment saying where its default comes from. The CloudFormation templates take the same values as parameters, which `deploy.sh` passes.
+Every tunable lives in `config.env`, each with a comment saying where its default comes from. `deploy.sh` passes the image and stack settings to CloudFormation as parameters; the scripts read the rest directly.
 
 To change a port, edit both `config.env` (`APP_PORT` or `HOOKS_PORT`) and the matching `ENV` line in `app/Dockerfile`. `deploy.sh` refuses to continue if they disagree.
 

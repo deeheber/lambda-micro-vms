@@ -159,6 +159,9 @@ aws cloudformation deploy \
 # Concept: the image is built asynchronously; poll until a version is ACTIVE.
 image_arn="$(stack_output "$IMAGE_STACK" ImageArn)"
 [ -n "$image_arn" ] || die "image stack has no ImageArn output"
+# A new ImageName replaces the image, and its versions start over, so the old
+# version number means nothing here.
+[ "$image_arn" = "${prev_image_arn:-}" ] || expect_new_version=""
 deadline=$((SECONDS + IMAGE_WAIT_SECONDS))
 first_state=""
 image_state=""
