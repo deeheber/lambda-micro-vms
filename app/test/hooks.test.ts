@@ -1,0 +1,76 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { HOOK_PREFIX, handleHook } from "../src/hooks.ts";
+import { createState } from "../src/state.ts";
+
+const READY = `${HOOK_PREFIX}ready`;
+const RUN = `${HOOK_PREFIX}run`;
+
+test("run sets microvmId from the body and assigns an instanceId", () => {
+  const s = createState();
+  const r = handleHook(s, "POST", RUN, '{"microvmId":"mvm-123"}');
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { ok: true });
+  assert.equal(s.microvmId, "mvm-123");
+  assert.equal(typeof s.instanceId, "string");
+});
+
+test("run on two fresh states assigns different instanceIds", () => {
+  const a = createState();
+  const b = createState();
+  handleHook(a, "POST", RUN, "{}");
+  handleHook(b, "POST", RUN, "{}");
+  assert.notEqual(a.instanceId, b.instanceId);
+});
+
+test("run tolerates a malformed body", () => {
+  for (const body of ["", "not json", "[]", "null", '{"microvmId":42}']) {
+    const s = createState();
+    const r = handleHook(s, "POST", RUN, body);
+    assert.equal(r.status, 200, body);
+    assert.equal(s.microvmId, null, body);
+    assert.equal(typeof s.instanceId, "string", body);
+  }
+});
+
+test("an unknown hook path returns 404 and logs nothing", () => {
+  const s = createState();
+  const r = handleHook(s, "POST", `${HOOK_PREFIX}validate`, "{}");
+  assert.equal(r.status, 404);
+  assert.equal(r.log, null);
+  assert.equal(s.instanceId, null);
+  assert.equal(handleHook(s, "GET", RUN, "").status, 404);
+});
+
+test("ready and run each return one JSON log line with hook, status and ts", () => {
+  const s = createState();
+  const now = new Date("2026-11-01T12:00:00.000Z");
+  assert.equal(
+    handleHook(s, "POST", READY, "", now).log,
+    '{"hook":"ready","status":503,"ts":"2026-11-01T12:00:00.000Z"}',
+  );
+  assert.equal(
+    handleHook(s, "POST", RUN, "{}", now).log,
+    '{"hook":"run","status":200,"ts":"2026-11-01T12:00:00.000Z"}',
+  );
+});
+
+test("a non-POST request to ready returns 404 and logs nothing", () => {
+  const s = createState();
+  s.appListening = true;
+  const r = handleHook(s, "GET", READY, "");
+  assert.equal(r.status, 404);
+  assert.deepEqual(r.body, { error: "not found" });
+  assert.equal(r.log, null);
+});
+
+test("ready returns 503 with ready false before the app server is listening, and 200 with ready true after", () => {
+  const s = createState();
+  const before = handleHook(s, "POST", READY, "");
+  assert.equal(before.status, 503);
+  assert.deepEqual(before.body, { ready: false });
+  s.appListening = true;
+  const after = handleHook(s, "POST", READY, "");
+  assert.equal(after.status, 200);
+  assert.deepEqual(after.body, { ready: true });
+});

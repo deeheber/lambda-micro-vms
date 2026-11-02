@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Lambda MicroVMs hello world - bootstrap stack. Long-lived plumbing: artifact
+  bucket, build role, execution role and log group.
+
+# Why two stacks: this one changes rarely and must exist BEFORE an image can be
+# built (the app zip is uploaded to the bucket first). The image stack
+# (image.yaml) is replaced whenever the app changes. Keeping them apart means a
+# failed image build never takes the bucket or roles down with it.
+
+Parameters:
+  ImageName:
+    Type: String
+    Default: mvm-hello
+    AllowedPattern: '^[a-zA-Z0-9-_]+$'
+    Description: Name of the MicroVM image; also names the log group.
+  LogRetentionDays:
+    Type: Number
+    Default: 7
+    Description: Days CloudWatch keeps MicroVM and image build logs.
+
+Resources:
+  # Holds the zipped app (Dockerfile + src/) that the image build reads.
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      # No BucketName: a generated name avoids baking an account ID or region in.
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Image build logs and MicroVM stdout (the hook lines) land here.
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda-microvms/${ImageName}'
+      RetentionInDays: !Ref LogRetentionDays
+
+  # The role the image build assumes. Concept: the build runs as this role, not
+  # as you, so it gets only what building needs.
+  BuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+              - sts:TagSession
+            # Confused-deputy guard: only this account's Lambda service calls
+            # may assume the role.
+            Condition:
+              StringEquals:
+                'aws:SourceAccount': !Ref AWS::AccountId
+      Policies:
+        - PolicyName: build
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Read the app zip. The artifacts/ prefix is the ONLY readable
+              # path, so deploy.sh must upload there.
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub '${ArtifactBucket.Arn}/artifacts/*'
+              # Write build logs to our log group only.
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LogGroup}'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LogGroup}:*'
+
+  # The role each running MicroVM assumes. Concept: the workload's identity.
+  # The app calls no AWS APIs, so it only needs to write logs.
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+              - sts:TagSession
+            Condition:
+              StringEquals:
+                'aws:SourceAccount': !Ref AWS::AccountId
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LogGroup}'
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LogGroup}:*'
+
+# Exported so the image stack and the scripts can find these by name.
+Outputs:
+  ArtifactBucketName:
+    Value: !Ref ArtifactBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ArtifactBucketName'
+  BuildRoleArn:
+    Value: !GetAtt BuildRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-BuildRoleArn'
+  ExecutionRoleArn:
+    Value: !GetAtt ExecutionRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ExecutionRoleArn'
+  LogGroupName:
+    Value: !Ref LogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-LogGroupName'
