@@ -12,7 +12,7 @@ require_cmd aws jq
 # Which image version to run: ask the service, not the stack output, which is
 # set when CloudFormation finishes and can lag a version still building.
 image_arn="$(stack_output "$IMAGE_STACK" ImageArn)"
-[ -n "$image_arn" ] || die "no ImageArn in stack $IMAGE_STACK; run 'make deploy' first"
+[ -n "$image_arn" ] || die "no ImageArn in stack $IMAGE_STACK; run 'npm run deploy' first"
 image_version="$(aws lambda-microvms get-microvm-image --image-identifier "$image_arn" --output json \
   | jq -r '.latestActiveImageVersion // ""')"
 [ -n "$image_version" ] || die "no active image version for $image_arn"
@@ -58,7 +58,7 @@ response="$(aws lambda-microvms run-microvm \
 
 mkdir -p "$BUILD_DIR"
 if [ -f "$MICROVM_FILE" ]; then
-  log "warning: overwriting $MICROVM_FILE (old microvmId $(jq -r '.microvmId' "$MICROVM_FILE")); 'make destroy' terminates it if still running"
+  log "warning: overwriting $MICROVM_FILE (old microvmId $(jq -r '.microvmId' "$MICROVM_FILE")); 'npm run destroy' terminates it if still running"
 fi
 # Endpoints come back without a scheme; other scripts prepend https://.
 record="$(jq -c '{microvmId: .microvmId, endpoint: .endpoint}' <<<"$response")"

@@ -11,7 +11,7 @@ case "$path" in
   /*) ;;
   *) die "path must start with /, got: $path" ;;
 esac
-[ -f "$MICROVM_FILE" ] || die "no $MICROVM_FILE; run 'make run' first"
+[ -f "$MICROVM_FILE" ] || die "no $MICROVM_FILE; run 'npm run microvm:run' first"
 require_cmd aws jq curl
 assert_sandbox
 
