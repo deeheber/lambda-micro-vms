@@ -25,7 +25,7 @@ if [ ! -f "$MICROVM_FILE" ]; then
     log "nothing to terminate (no $MICROVM_FILE)"
     exit 0
   fi
-  die "no $MICROVM_FILE; run 'make run' first"
+  die "no $MICROVM_FILE; run 'npm run microvm:run' first"
 fi
 
 require_cmd aws jq

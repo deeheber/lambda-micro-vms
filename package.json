@@ -1,0 +1,24 @@
+{
+  "name": "lambda-micro-vms",
+  "private": true,
+  "workspaces": [
+    "app"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck -w app",
+    "test": "npm test -w app",
+    "check": "npm run typecheck && npm test && for f in scripts/*.sh; do bash -n \"$f\" || exit 1; done && cfn-lint infra/*.yaml",
+    "deploy": "bash scripts/deploy.sh",
+    "microvm:run": "bash scripts/run.sh",
+    "microvm:status": "bash scripts/microvm.sh status",
+    "microvm:suspend": "bash scripts/microvm.sh suspend",
+    "microvm:resume": "bash scripts/microvm.sh resume",
+    "microvm:terminate": "bash scripts/microvm.sh terminate",
+    "call": "bash scripts/call.sh",
+    "smoke": "bash scripts/smoke.sh",
+    "destroy": "bash scripts/destroy.sh"
+  }
+}

@@ -2,19 +2,14 @@
 
 ## Working boundaries
 
-- `make deploy`, `run`, `call`, `smoke`, `destroy` and the lifecycle targets call AWS. Run them only when asked, only against a sandbox account, and always finish with `make destroy`, even after a failure.
-- `make check` runs every offline check. Single test: `cd app && node --test --test-name-pattern=<name> 'test/**/*.test.ts'`.
+- Every npm script except `check`, `typecheck` and `test` calls AWS. Run them only when asked, only against a sandbox account, and always finish with `npm run destroy`, even after a failure.
+- Single test: `cd app && node --test --test-name-pattern=<name> 'test/**/*.test.ts'`. Don't use `npm test -- --test-name-pattern=…`: the flag goes after the glob and filters nothing.
 - Check CLI shapes offline with `aws lambda-microvms <command> help`.
 
 ## Design decisions
 
-- Minimal on purpose: no SAM, Lambda functions, VPC connectors, extra hooks or run hook payload, and no app build or test tooling beyond `tsc` and `node --test`. Bigger ideas go in `ROADMAP.md` and `next-experiment` issues.
-- No account IDs or region literals outside `config.env`. Every tunable lives in `config.env` (scripts) or a CloudFormation parameter (templates), never as a literal in code.
-- Every script calls `assert_sandbox` before its first `aws` call.
-- Create per-MicroVM values (like `instanceId`) in the `run` hook, never at module load: anything created earlier is baked into the snapshot and shared by every MicroVM.
-- No runtime dependencies in `app/`; Node 24 runs `.ts` directly.
-- Least-privilege IAM: no `*` in `Action` or `Resource`.
-- Comments teach: say which MicroVM concept each piece demonstrates.
+- Minimal on purpose: no SAM, Lambda functions, VPC connectors, extra hooks or run hook payload, no runtime dependencies in `app/`, and no app build or test tooling beyond `tsc` and `node --test`. Bigger ideas go in `ROADMAP.md` and `next-experiment` issues.
+- Least-privilege IAM: no bare `*` in `Action` or `Resource` (a scoped path like `artifacts/*` is fine).
 
 ## Commits
 

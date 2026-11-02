@@ -87,7 +87,7 @@ aws cloudformation deploy \
   --parameter-overrides \
   "ImageName=$IMAGE_NAME" \
   "LogRetentionDays=$LOG_RETENTION_DAYS" \
-  >&2 || die "bootstrap stack deploy failed; run 'make destroy' before retrying"
+  >&2 || die "bootstrap stack deploy failed; run 'npm run destroy' before retrying"
 
 # --- 6. Base image version ---------------------------------------------------
 # Empty BASE_IMAGE_VERSION means "newest buildable": rebuilding picks up
@@ -153,7 +153,7 @@ aws cloudformation deploy \
   --template-file "$REPO_ROOT/infra/image.yaml" \
   --no-fail-on-empty-changeset \
   --parameter-overrides "${image_params[@]}" \
-  >&2 || die "image stack deploy failed; run 'make destroy' before retrying"
+  >&2 || die "image stack deploy failed; run 'npm run destroy' before retrying"
 
 # --- 9. Wait for the build ---------------------------------------------------
 # Concept: the image is built asynchronously; poll until a version is ACTIVE.

@@ -16,26 +16,27 @@ It's meant for learning the service and as a template to fork. The code and scri
 ## Quick start
 
 ```sh
-make check     # offline: typecheck, unit tests, script syntax, template lint
-make deploy    # build and upload the app, create both stacks, wait for the image
-make smoke     # run a MicroVM end to end and verify it
-make destroy   # tear everything down
+npm ci            # install dev dependencies (once)
+npm run check     # offline: typecheck, unit tests, script syntax, template lint
+npm run deploy    # build and upload the app, create both stacks, wait for the image
+npm run smoke     # run a MicroVM end to end and verify it
+npm run destroy   # tear everything down
 ```
 
-## Make targets
+## npm scripts
 
-| Target | What it does | Concept it demonstrates |
+| Script | What it does | Concept it demonstrates |
 |---|---|---|
-| `make deploy` | Packages `app/`, creates the stacks, waits for an active image version | Image build: the platform runs your Dockerfile, waits for the `ready` hook to return 200, then snapshots the running app |
-| `make run` | Launches one MicroVM from the latest image version | The `run` hook fires once per MicroVM, after the snapshot is restored, which is where per-instance values (`instanceId`) are created; the idle policy is set here |
-| `make call` | Mints a token and calls the app over HTTPS (`CALL_PATH=/other make call` for another path) | Auth: a short-lived token sent as `X-aws-proxy-auth` through the MicroVM proxy |
-| `make status` | Prints the MicroVM's state | The lifecycle states (`RUNNING`, `SUSPENDED`, ...) |
-| `make suspend` | Suspends the MicroVM | Suspend keeps memory and disk and stops compute billing |
-| `make resume` | Resumes it | Resume continues from the saved memory; the idle policy can also auto-resume on traffic |
-| `make terminate` | Terminates it | Terminate ends all charges for that MicroVM |
-| `make smoke` | Run, call, suspend, resume, call, terminate, asserting memory survived | Same `instanceId` and a larger `requestCount` after resume prove the memory was preserved |
-| `make destroy` | Terminates MicroVMs, deletes both stacks, empties the bucket | Always tear down |
-| `make check` | Offline checks, no AWS calls | n/a |
+| `npm run deploy` | Packages `app/`, creates the stacks, waits for an active image version | Image build: the platform runs your Dockerfile, waits for the `ready` hook to return 200, then snapshots the running app |
+| `npm run microvm:run` | Launches one MicroVM from the latest image version | The `run` hook fires once per MicroVM, after the snapshot is restored, which is where per-instance values (`instanceId`) are created; the idle policy is set here |
+| `npm run call` | Mints a token and calls the app over HTTPS (`npm run call -- /other` for another path) | Auth: a short-lived token sent as `X-aws-proxy-auth` through the MicroVM proxy |
+| `npm run microvm:status` | Prints the MicroVM's state | The lifecycle states (`RUNNING`, `SUSPENDED`, ...) |
+| `npm run microvm:suspend` | Suspends the MicroVM | Suspend keeps memory and disk and stops compute billing |
+| `npm run microvm:resume` | Resumes it | Resume continues from the saved memory; the idle policy can also auto-resume on traffic |
+| `npm run microvm:terminate` | Terminates it | Terminate ends all charges for that MicroVM |
+| `npm run smoke` | Run, call, suspend, resume, call, terminate, asserting memory survived | Same `instanceId` and a larger `requestCount` after resume prove the memory was preserved |
+| `npm run destroy` | Terminates MicroVMs, deletes both stacks, empties the bucket | Always tear down |
+| `npm run check` | Offline checks, no AWS calls. [GitHub Actions](.github/workflows/checks.yaml) runs it on every PR to `main` | n/a |
 
 The app itself is two tiny servers (`app/src/`): one on `APP_PORT` returning JSON with the `instanceId`, `microvmId` and a `requestCount`, and one on `HOOKS_PORT` for the platform's `ready` and `run` hook calls. Each hook call prints one JSON line, which you can read in CloudWatch Logs.
 
@@ -55,7 +56,7 @@ The app itself is two tiny servers (`app/src/`): one on `APP_PORT` returning JSO
 - Each image version costs storage.
 - Data transfer is billed at standard rates.
 
-The defaults are cost-conscious: idle MicroVMs suspend after `IDLE_MAX_SECONDS`, and `MAX_DURATION_SECONDS` caps every MicroVM's lifetime. Always run `make destroy` when you are done.
+The defaults are cost-conscious: idle MicroVMs suspend after `IDLE_MAX_SECONDS`, and `MAX_DURATION_SECONDS` caps every MicroVM's lifetime. Always run `npm run destroy` when you are done.
 
 ## Configuration
 
