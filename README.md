@@ -8,7 +8,7 @@ It's meant for learning the service and as a template to fork. The code and scri
 
 ## Prerequisites
 
-- An AWS account with admin access. Use a sandbox account: everything here is created and destroyed by the scripts.
+- An AWS sandbox account. The scripts create and delete CloudFormation stacks, IAM roles, an S3 bucket, a log group and MicroVM resources; an admin role covers all of these.
 - `EXPECTED_ACCOUNT_ID` set to that account's ID, exported in your shell or in a gitignored `.env` file in the repo root. Every script that calls AWS refuses to run against any other account. Optionally set `AWS_PROFILE` in the same place.
 - AWS CLI v2 (with the `lambda-microvms` commands), `jq`, `zip`, `curl`, `cfn-lint`, Node 24 and Docker.
 - The region is set in `config.env` (`REGION`). An `AWS_REGION` already in your environment wins.

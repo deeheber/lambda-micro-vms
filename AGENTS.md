@@ -8,7 +8,7 @@
 
 ## Design decisions
 
-- Minimal on purpose: no SAM, Lambda functions, VPC connectors, extra hooks or run hook payload, and no tooling beyond `tsc` and `node --test`. Bigger ideas go in `ROADMAP.md` and `next-experiment` issues.
+- Minimal on purpose: no SAM, Lambda functions, VPC connectors, extra hooks or run hook payload, and no app build or test tooling beyond `tsc` and `node --test`. Bigger ideas go in `ROADMAP.md` and `next-experiment` issues.
 - No account IDs or region literals outside `config.env`. Every tunable lives in `config.env` (scripts) or a CloudFormation parameter (templates), never as a literal in code.
 - Every script calls `assert_sandbox` before its first `aws` call.
 - Create per-MicroVM values (like `instanceId`) in the `run` hook, never at module load: anything created earlier is baked into the snapshot and shared by every MicroVM.

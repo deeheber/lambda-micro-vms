@@ -119,19 +119,29 @@ aws s3 cp "$ZIP_PATH" "$artifact_uri" --only-show-errors >&2
 # service for a new image version, which builds and snapshots the app.
 # On a re-deploy the image already has an active version, and it stays active
 # while the new one builds. Remember it, so step 9 waits for a new version
-# instead of accepting the old one. Only the artifact or the base image version
-# is expected to produce one.
+# instead of accepting the old one. Any changed parameter updates the image.
+image_params=(
+  "BootstrapStackName=$BOOTSTRAP_STACK"
+  "ImageName=$IMAGE_NAME"
+  "ImageDescription=$IMAGE_DESCRIPTION"
+  "BaseImageVersion=$base_version"
+  "ArtifactUri=$artifact_uri"
+  "MemoryMiB=$MEMORY_MIB"
+  "HooksPort=$HOOKS_PORT"
+  "ReadyTimeoutInSeconds=$READY_TIMEOUT_SECONDS"
+  "RunTimeoutInSeconds=$RUN_TIMEOUT_SECONDS"
+)
 prev_version=""
 expect_new_version=""
 if prev_stack_json="$(aws cloudformation describe-stacks --stack-name "$IMAGE_STACK" --output json 2>/dev/null)"; then
-  prev_param() { jq -r --arg k "$1" '.Stacks[0].Parameters[]? | select(.ParameterKey==$k) | .ParameterValue' <<<"$prev_stack_json"; }
   prev_image_arn="$(jq -r '.Stacks[0].Outputs[]? | select(.OutputKey=="ImageArn") | .OutputValue' <<<"$prev_stack_json")"
   if [ -n "$prev_image_arn" ]; then
     prev_version="$(aws lambda-microvms get-microvm-image --image-identifier "$prev_image_arn" --output json \
       | jq -r '.latestActiveImageVersion // ""')"
   fi
-  if [ -n "$prev_version" ] && { [ "$(prev_param ArtifactUri)" != "$artifact_uri" ] \
-    || [ "$(prev_param BaseImageVersion)" != "$base_version" ]; }; then
+  prev_params="$(jq -r '.Stacks[0].Parameters[]? | "\(.ParameterKey)=\(.ParameterValue)"' <<<"$prev_stack_json" | LC_ALL=C sort)"
+  new_params="$(printf '%s\n' "${image_params[@]}" | LC_ALL=C sort)"
+  if [ -n "$prev_version" ] && [ "$prev_params" != "$new_params" ]; then
     expect_new_version=1
     log "active version before deploy: $prev_version; waiting for a newer one"
   fi
@@ -142,16 +152,7 @@ aws cloudformation deploy \
   --stack-name "$IMAGE_STACK" \
   --template-file "$REPO_ROOT/infra/image.yaml" \
   --no-fail-on-empty-changeset \
-  --parameter-overrides \
-  "BootstrapStackName=$BOOTSTRAP_STACK" \
-  "ImageName=$IMAGE_NAME" \
-  "ImageDescription=$IMAGE_DESCRIPTION" \
-  "BaseImageVersion=$base_version" \
-  "ArtifactUri=$artifact_uri" \
-  "MemoryMiB=$MEMORY_MIB" \
-  "HooksPort=$HOOKS_PORT" \
-  "ReadyTimeoutInSeconds=$READY_TIMEOUT_SECONDS" \
-  "RunTimeoutInSeconds=$RUN_TIMEOUT_SECONDS" \
+  --parameter-overrides "${image_params[@]}" \
   >&2 || die "image stack deploy failed; run 'make destroy' before retrying"
 
 # --- 9. Wait for the build ---------------------------------------------------

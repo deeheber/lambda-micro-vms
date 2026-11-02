@@ -9,16 +9,12 @@ source "$SCRIPT_DIR/lib.sh"
 assert_sandbox
 require_cmd aws jq
 
-# Which image version to run: normally a stack output, with a service lookup as
-# a fallback.
+# Which image version to run: ask the service, not the stack output, which is
+# set when CloudFormation finishes and can lag a version still building.
 image_arn="$(stack_output "$IMAGE_STACK" ImageArn)"
 [ -n "$image_arn" ] || die "no ImageArn in stack $IMAGE_STACK; run 'make deploy' first"
-image_version="$(stack_output "$IMAGE_STACK" LatestActiveImageVersion)"
-if [ -z "$image_version" ]; then
-  log "stack output LatestActiveImageVersion is empty; asking the service instead"
-  image_version="$(aws lambda-microvms get-microvm-image --image-identifier "$image_arn" --output json \
-    | jq -r '.latestActiveImageVersion // ""')"
-fi
+image_version="$(aws lambda-microvms get-microvm-image --image-identifier "$image_arn" --output json \
+  | jq -r '.latestActiveImageVersion // ""')"
 [ -n "$image_version" ] || die "no active image version for $image_arn"
 
 # Identity and logging come from the bootstrap stack.
