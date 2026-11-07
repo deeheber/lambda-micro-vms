@@ -1,75 +1,24 @@
 # lambda-micro-vms
 
-A minimal "hello world" for [AWS Lambda MicroVMs](https://docs.aws.amazon.com/lambda/latest/dg/lambda-microvms-guide.html).
-It builds a MicroVM image with CloudFormation, runs a MicroVM, calls it over HTTPS, then suspends, resumes and terminates it.
-It's meant for learning the service and as a template to fork. The code and scripts are heavily commented with the MicroVM concept each piece shows.
+Learn [AWS Lambda MicroVMs](https://docs.aws.amazon.com/lambda/latest/dg/lambda-microvms-guide.html)
+through one app that builds on itself. Each lesson keeps its own code and tests
+so you can revisit earlier stages.
 
-> Status: tested end to end in a sandbox account on 2026-11-01.
+| Example | What it teaches |
+|---|---|
+| [Hello world](examples/hello-world/README.md) | Build an image, launch a VM, call it over HTTPS, suspend, resume and terminate it. Start with its [hands-on lab](examples/hello-world/README.md#first-hands-on-lab-pause-and-restart-a-workspace). |
 
-## Prerequisites
+See [ROADMAP.md](ROADMAP.md) for the remaining lessons and GitHub issue order.
 
-- An AWS sandbox account. The scripts create and delete CloudFormation stacks, IAM roles, an S3 bucket, a log group and MicroVM resources; an admin role covers all of these.
-- `EXPECTED_ACCOUNT_ID` set to that account's ID, exported in your shell or in a gitignored `.env` file in the repo root. Every script that calls AWS refuses to run against any other account. Optionally set `AWS_PROFILE` in the same place.
-- AWS CLI v2 (with the `lambda-microvms` commands), `jq`, `zip`, `curl`, `cfn-lint`, Node 24 and Docker.
-- The region is set in `config.env` (`REGION`). An `AWS_REGION` already in your environment wins.
+## Run checks
 
-## Quick start
+Each example owns its npm scripts and lockfile. Using Node 24 and `cfn-lint`:
 
 ```sh
-npm ci            # install dev dependencies (once)
-npm run check     # offline: typecheck, unit tests, script syntax, template lint
-npm run deploy    # build and upload the app, create both stacks, wait for the image
-npm run smoke     # run a MicroVM end to end and verify it
-npm run destroy   # tear everything down
+cd examples/hello-world
+npm ci
+npm run check
 ```
 
-## npm scripts
-
-| Script | What it does | Concept it demonstrates |
-|---|---|---|
-| `npm run deploy` | Packages `app/`, creates the stacks, waits for an active image version | Image build: the platform runs your Dockerfile, waits for the `ready` hook to return 200, then snapshots the running app |
-| `npm run microvm:run` | Launches one MicroVM from the latest image version | The `run` hook fires once per MicroVM, after the snapshot is restored, which is where per-instance values (`instanceId`) are created; the idle policy is set here |
-| `npm run call` | Mints a token and calls the app over HTTPS (`npm run call -- /other` for another path) | Auth: a short-lived token sent as `X-aws-proxy-auth` through the MicroVM proxy |
-| `npm run microvm:status` | Prints the MicroVM's state | The lifecycle states (`RUNNING`, `SUSPENDED`, ...) |
-| `npm run microvm:suspend` | Suspends the MicroVM | Suspend keeps memory and disk and stops compute billing |
-| `npm run microvm:resume` | Resumes it | Resume continues from the saved memory; the idle policy can also auto-resume on traffic |
-| `npm run microvm:terminate` | Terminates it | Terminate ends all charges for that MicroVM |
-| `npm run smoke` | Run, call, suspend, resume, call, terminate, asserting memory survived | Same `instanceId` and a larger `requestCount` after resume prove the memory was preserved |
-| `npm run destroy` | Terminates MicroVMs, deletes both stacks, empties the bucket | Always tear down |
-| `npm run check` | Offline checks, no AWS calls. [GitHub Actions](.github/workflows/checks.yaml) runs it on every PR to `main` | n/a |
-
-The app itself is two tiny servers (`app/src/`): one on `APP_PORT` returning JSON with the `instanceId`, `microvmId` and a `requestCount`, and one on `HOOKS_PORT` for the platform's `ready` and `run` hook calls. Each hook call prints one JSON line, which you can read in CloudWatch Logs.
-
-## Two stacks
-
-- `infra/bootstrap.yaml` (`<STACK_PREFIX>-bootstrap`): the artifact bucket, the build role, the execution role and the log group. It changes rarely and has to exist first, because the app zip must be uploaded to the bucket before an image can point at it.
-- `infra/image.yaml` (`<STACK_PREFIX>-image`): the `AWS::Lambda::MicrovmImage`. It changes whenever the app does, and a failed image build never takes the bucket or roles with it.
-
-## Content-hashed artifacts
-
-`deploy.sh` zips `app/` deterministically (sorted entries, fixed modes and timestamps) and names the zip after its SHA-256: `s3://<bucket>/artifacts/app-<sha256>.zip`. Unchanged code gives the same key, so CloudFormation sees no change and no new image version is built. Changed code gives a new key, which is a changed template property, which builds a new image version. Any other changed image parameter builds one too, including a newer base image version, which `deploy.sh` picks up when `BASE_IMAGE_VERSION` is empty. The `artifacts/` prefix is the only path the build role can read.
-
-## Cost model
-
-- While a MicroVM is running you pay the baseline compute rate (default 2 GB / 1 vCPU); bursts up to 4x are billed only while in use.
-- While it is suspended you pay for storage only.
-- Each image version costs storage.
-- Data transfer is billed at standard rates.
-
-The defaults are cost-conscious: idle MicroVMs suspend after `IDLE_MAX_SECONDS`, and `MAX_DURATION_SECONDS` caps every MicroVM's lifetime. Always run `npm run destroy` when you are done.
-
-## Configuration
-
-Every tunable lives in `config.env`, each with a comment saying where its default comes from. `deploy.sh` passes the image and stack settings to CloudFormation as parameters; the scripts read the rest directly.
-
-To change a port, edit both `config.env` (`APP_PORT` or `HOOKS_PORT`) and the matching `ENV` line in `app/Dockerfile`. `deploy.sh` refuses to continue if they disagree.
-
-## Fork it
-
-1. Set `STACK_PREFIX` and `IMAGE_NAME` in `config.env` to your own names.
-2. Replace `app/src/` with your app. Keep the `ready` hook answering 503 until your app is up, and create anything unique to one MicroVM in the `run` hook, never before the snapshot.
-3. Keep the Dockerfile on the managed `al2023-minimal` base with Node from `dnf`, so the image stays snapshot-safe.
-
-## Next experiments
-
-See the issues labelled [`next-experiment`](https://github.com/deeheber/lambda-micro-vms/issues?q=is%3Aissue+label%3Anext-experiment) and [`ROADMAP.md`](ROADMAP.md).
+This runs the hello world's offline checks. See its README for AWS prerequisites
+and deployment instructions. Run all npm commands from the lesson folder.

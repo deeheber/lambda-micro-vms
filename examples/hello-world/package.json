@@ -1,9 +1,6 @@
 {
-  "name": "lambda-micro-vms",
+  "name": "hello-world-example",
   "private": true,
-  "workspaces": [
-    "app"
-  ],
   "engines": {
     "node": ">=24"
   },
@@ -20,5 +17,8 @@
     "call": "bash scripts/call.sh",
     "smoke": "bash scripts/smoke.sh",
     "destroy": "bash scripts/destroy.sh"
-  }
+  },
+  "workspaces": [
+    "app"
+  ]
 }

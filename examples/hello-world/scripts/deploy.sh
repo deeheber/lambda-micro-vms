@@ -17,7 +17,7 @@ esac
 # --- 1. Port check -----------------------------------------------------------
 # The Dockerfile and config.env both name the ports; a mismatch would build an
 # image whose servers listen where the platform is not looking.
-dockerfile="$REPO_ROOT/app/Dockerfile"
+dockerfile="$EXAMPLE_ROOT/app/Dockerfile"
 check_port() {
   local key="$1" want="$2" have
   have="$(sed -n "s/^ENV ${key}=//p" "$dockerfile")"
@@ -47,7 +47,7 @@ package_app() {
   rm -rf "$stage" "$tmp_zip"
   mkdir -p "$stage"
   # Copy app/ without dependencies, tests or Finder litter.
-  tar -C "$REPO_ROOT/app" --exclude node_modules --exclude test --exclude .DS_Store -cf - . \
+  tar -C "$EXAMPLE_ROOT/app" --exclude node_modules --exclude test --exclude .DS_Store -cf - . \
     | tar -C "$stage" -xf -
   find "$stage" -type f -exec chmod 644 {} +
   find "$stage" -type d -exec chmod 755 {} +
@@ -81,7 +81,7 @@ require_cmd aws jq zip
 log "deploying $BOOTSTRAP_STACK"
 aws cloudformation deploy \
   --stack-name "$BOOTSTRAP_STACK" \
-  --template-file "$REPO_ROOT/infra/bootstrap.yaml" \
+  --template-file "$EXAMPLE_ROOT/infra/bootstrap.yaml" \
   --capabilities CAPABILITY_IAM \
   --no-fail-on-empty-changeset \
   --parameter-overrides \
@@ -150,7 +150,7 @@ build_start=$SECONDS
 log "deploying $IMAGE_STACK"
 aws cloudformation deploy \
   --stack-name "$IMAGE_STACK" \
-  --template-file "$REPO_ROOT/infra/image.yaml" \
+  --template-file "$EXAMPLE_ROOT/infra/image.yaml" \
   --no-fail-on-empty-changeset \
   --parameter-overrides "${image_params[@]}" \
   >&2 || die "image stack deploy failed; run 'npm run destroy' before retrying"
