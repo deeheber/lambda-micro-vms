@@ -9,9 +9,14 @@ It's meant for learning the service and as a template to fork. The code and scri
 ## Prerequisites
 
 - An AWS sandbox account. The scripts create and delete CloudFormation stacks, IAM roles, an S3 bucket, a log group and MicroVM resources; an admin role covers all of these.
-- `EXPECTED_ACCOUNT_ID` set to that account's ID, exported in your shell or in a gitignored `.env` file in the repo root or this example folder. Every script that calls AWS refuses to run against any other account. Optionally set `AWS_PROFILE` in the same place. Example-local `.env` values override root `.env` values.
+- `EXPECTED_ACCOUNT_ID` set to that account's ID, exported in your shell or in a gitignored `.env` file in the repo root or this example folder. Every script that calls AWS refuses to run against any other account. Optionally set `AWS_PROFILE` in the same place.
 - AWS CLI v2 (with the `lambda-microvms` commands), `jq`, `zip`, `curl`, `cfn-lint`, Node 24 and Docker.
 - The region is set in `config.env` (`REGION`). An `AWS_REGION` already in your environment wins.
+
+For `EXPECTED_ACCOUNT_ID` and `AWS_PROFILE`, values in the root `.env` override
+exported shell values; the example-local `.env` overrides both. Update or remove
+stale values in both files when switching sandboxes. The account guard checks
+the resulting configuration.
 
 ## Quick start
 
@@ -27,10 +32,10 @@ yourself, use the [first hands-on lab](#first-hands-on-lab-pause-and-restart-a-w
 Always run `npm run destroy` after an AWS session, including after a failure.
 
 ```sh
-npm run check     # offline: typecheck, unit tests, script syntax, template lint
-npm run deploy    # build and upload the app, create both stacks, wait for the image
-npm run smoke     # run a MicroVM end to end and verify it
-npm run destroy   # tear everything down
+npm run check &&
+  npm run deploy &&
+  npm run smoke
+npm run destroy
 ```
 
 ## First hands-on lab: pause and restart a workspace
@@ -61,10 +66,10 @@ The defaults terminate a VM after 10 minutes suspended or 30 minutes total;
 complete the comparisons within those limits.
 
 ```sh
-npm run deploy
-npm run microvm:run
-npm run call
-npm run call
+npm run deploy &&
+  npm run microvm:run &&
+  npm run call &&
+  npm run call
 ```
 
 If the first call fails while the VM starts, retry for up to 60 seconds. Record `instanceId`,
@@ -93,9 +98,9 @@ call fails, retry it; if auto-resume still does not work, run
 ### 4. Start a fresh workspace
 
 ```sh
-npm run microvm:terminate
-npm run microvm:run
-npm run call
+npm run microvm:terminate &&
+  npm run microvm:run &&
+  npm run call
 ```
 
 Retry the call if the new VM is still starting. Expect new `instanceId` and
