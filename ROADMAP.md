@@ -1,6 +1,6 @@
 # Roadmap
 
-Start with the [first hands-on lab](README.md#first-hands-on-lab-pause-and-restart-a-workspace),
+Start with the [first hands-on lab](examples/hello-world/README.md#first-hands-on-lab-pause-and-restart-a-workspace),
 then work through the GitHub issues below from top to bottom.
 
 | GitHub issue | What to learn and why it comes here |
@@ -20,7 +20,7 @@ then work through the GitHub issues below from top to bottom.
 ## One app, saved at each lesson
 
 Use one folder per GitHub issue, plus `hello-world/` as the starting point.
-Each folder contains the previous step's complete app, infrastructure and scripts,
+Each folder contains the previous step's complete app, tests, infrastructure, scripts and npm package files,
 plus that issue's changes and instructions. Keep earlier folders as runnable
 references. Operational lessons, such as image versions, can carry forward
 unchanged code and add the exercise to their README.
@@ -52,10 +52,13 @@ when starting the next lesson.
 
 ## Next step: start GitHub issue #8
 
-Move the current example into `examples/hello-world/`, including its setup
-instructions and first lab. Copy it into `examples/session-config/` and implement
-GitHub issue #8 there. Create later lesson folders as their issues are started.
+Copy `examples/hello-world/` into `examples/session-config/` and implement
+GitHub issue #8 there. Keep `STACK_PREFIX` and `IMAGE_NAME` unchanged to update
+the existing sandbox stacks.
+Create later lesson folders as their issues are started.
 
-Update npm scripts, workspace configuration and CI paths so offline checks still
-cover the lessons. Scope the minimal-example rules in `AGENTS.md` to the hello
-world so later lessons can introduce the planned hooks, launcher and networking.
+When adding the next folder, make CI a matrix with one job per lesson folder.
+In each matrix job, run `npm ci` using that lesson's lockfile, then its offline
+`npm run check`. Point the npm cache at the lesson's lockfile. Add each new lesson to the matrix and root README. Keep tests
+inside their lesson folders. Run checks from each lesson folder locally too.
+Do not copy the hello world's minimal-only `AGENTS.md` rules into advanced lessons.

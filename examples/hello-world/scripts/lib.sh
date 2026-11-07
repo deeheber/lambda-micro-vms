@@ -2,9 +2,10 @@
 set -euo pipefail
 # Shared helpers, sourced by every other script. Not meant to be run directly.
 
-# The repo root is the parent of this file's directory, wherever we are called from.
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_DIR="$REPO_ROOT/.build"
+# Paths are independent of the caller's working directory.
+EXAMPLE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$EXAMPLE_ROOT/../.." && pwd)"
+BUILD_DIR="$EXAMPLE_ROOT/.build"
 # Where run.sh records the MicroVM it launched: {"microvmId","endpoint"}.
 MICROVM_FILE="$BUILD_DIR/microvm.json"
 
@@ -12,10 +13,14 @@ MICROVM_FILE="$BUILD_DIR/microvm.json"
 # set -a exports everything so child processes (aws) see AWS_PROFILE.
 set -a
 # shellcheck source=/dev/null
-source "$REPO_ROOT/config.env"
+source "$EXAMPLE_ROOT/config.env"
 if [ -f "$REPO_ROOT/.env" ]; then
   # shellcheck source=/dev/null
   source "$REPO_ROOT/.env"
+fi
+if [ -f "$EXAMPLE_ROOT/.env" ]; then
+  # shellcheck source=/dev/null
+  source "$EXAMPLE_ROOT/.env"
 fi
 set +a
 

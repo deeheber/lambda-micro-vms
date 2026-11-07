@@ -11,7 +11,7 @@ FROM public.ecr.aws/lambda/microvms:al2023-minimal
 RUN dnf install -y nodejs24 && dnf clean all
 
 # Ports the servers read from the environment. Changing a port means editing
-# these two lines AND config.env; deploy.sh and a verify command compare them.
+# these two lines AND config.env; deploy.sh compares them.
 ENV APP_PORT=8080
 ENV HOOKS_PORT=9000
 
