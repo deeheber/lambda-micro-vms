@@ -109,8 +109,9 @@ resuming the previous VM continued its saved session.
 npm run destroy
 ```
 
-For later experiments, `npm run smoke` automates the suspend/resume memory check;
-follow it with `npm run destroy` to remove the image and supporting resources.
+For later experiments, `npm run smoke` automates the suspend/resume memory check.
+If you have torn down the deployment, run `npm run deploy` before the smoke test.
+Follow the smoke test with `npm run destroy` to remove the image and supporting resources.
 Next, follow the issue order in [`ROADMAP.md`](../../ROADMAP.md).
 
 ## npm scripts
