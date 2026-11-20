@@ -3,7 +3,7 @@
 ## Working boundaries
 
 - Every npm script except `check`, `typecheck` and `test` calls AWS. Run them only when asked, only against a sandbox account, and finish each AWS sandbox session with that lesson's `npm run destroy`, including after a failure.
-- Single test: `cd examples/hello-world/app && node --test --test-name-pattern=<name> 'test/**/*.test.ts'`. Don't use `npm test -- --test-name-pattern=…`: the flag goes after the glob and filters nothing.
+- Single test: `cd examples/01-hello-world/app && node --test --test-name-pattern=<name> 'test/**/*.test.ts'`. Don't use `npm test -- --test-name-pattern=…`: the flag goes after the glob and filters nothing.
 - Check CLI shapes offline with `aws lambda-microvms <command> help`.
 
 ## Design decisions

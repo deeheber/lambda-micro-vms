@@ -1,6 +1,6 @@
 # Roadmap
 
-Start with the [first hands-on lab](examples/hello-world/README.md#first-hands-on-lab-pause-and-restart-a-workspace),
+Start with the [first hands-on lab](examples/01-hello-world/README.md#first-hands-on-lab-pause-and-restart-a-workspace),
 then work through the GitHub issues below from top to bottom.
 
 | GitHub issue | What to learn and why it comes here |
@@ -19,7 +19,8 @@ then work through the GitHub issues below from top to bottom.
 
 ## One app, saved at each lesson
 
-Use one folder per GitHub issue, plus `hello-world/` as the starting point.
+Use a two-digit prefix to show the learning order. Start with `01-hello-world/`,
+then use one folder per GitHub issue.
 Each folder contains the previous step's complete app, tests, infrastructure, scripts and npm package files,
 plus that issue's changes and instructions. Keep earlier folders as runnable
 references. Operational lessons, such as image versions, can carry forward
@@ -29,10 +30,10 @@ For example:
 
 ```text
 examples/
-  hello-world/            # starting point
-  session-config/         # hello world + GitHub issue #8
-  image-versions/         # session config + GitHub issue #9
-  aws-access/             # previous stage + GitHub issue #10
+  01-hello-world/       # starting point
+  02-session-config/    # hello world + GitHub issue #8
+  03-image-versions/    # session config + GitHub issue #9
+  04-aws-access/        # previous stage + GitHub issue #10
 ```
 
 Deploy each consecutive lesson using the same sandbox stack names and image name.
@@ -52,7 +53,7 @@ when starting the next lesson.
 
 ## Next step: start GitHub issue #8
 
-Copy `examples/hello-world/` into `examples/session-config/` and implement
+Copy `examples/01-hello-world/` into `examples/02-session-config/` and implement
 GitHub issue #8 there. Keep `STACK_PREFIX` and `IMAGE_NAME` unchanged to update
 the existing sandbox stacks.
 Create later lesson folders as their issues are started.

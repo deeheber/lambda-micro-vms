@@ -6,7 +6,7 @@ so you can revisit earlier stages.
 
 | Example | What it teaches |
 |---|---|
-| [Hello world](examples/hello-world/README.md) | Build an image, launch a VM, call it over HTTPS, suspend, resume and terminate it. Start with its [hands-on lab](examples/hello-world/README.md#first-hands-on-lab-pause-and-restart-a-workspace). |
+| [Hello world](examples/01-hello-world/README.md) | Build an image, launch a VM, call it over HTTPS, suspend, resume and terminate it. Start with its [hands-on lab](examples/01-hello-world/README.md#first-hands-on-lab-pause-and-restart-a-workspace). |
 
 See [ROADMAP.md](ROADMAP.md) for the remaining lessons and GitHub issue order.
 
@@ -15,7 +15,7 @@ See [ROADMAP.md](ROADMAP.md) for the remaining lessons and GitHub issue order.
 Each example owns its npm scripts and lockfile. Using Node 24 and `cfn-lint`:
 
 ```sh
-cd examples/hello-world
+cd examples/01-hello-world
 npm ci
 npm run check
 ```
