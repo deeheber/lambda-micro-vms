@@ -23,7 +23,7 @@ the resulting configuration.
 From the repo root, enter the example and install dependencies:
 
 ```sh
-cd examples/hello-world
+cd examples/01-hello-world
 npm ci
 ```
 
@@ -49,7 +49,7 @@ Complete the prerequisites above, including setting `EXPECTED_ACCOUNT_ID` for
 your sandbox account. From the repo root, run:
 
 ```sh
-cd examples/hello-world
+cd examples/01-hello-world
 npm ci
 npm run check
 ```
